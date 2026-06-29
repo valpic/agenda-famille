@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Agenda famille">
+<meta name="theme-color" content="#ffffff">
+<title>Agenda famille</title>
+<style>
+  :root {
+    --accent: #2563eb;
+    --accent-light: #dbeafe;
+    --accent-dark: #1d4ed8;
+    --purple: #7c3aed;
+    --purple-light: #ede9fe;
+    --green-light: #dcfce7;
+    --green: #16a34a;
+    --surface: #ffffff;
+    --surface-1: #f8fafc;
+    --border: #e2e8f0;
+    --border-strong: #cbd5e1;
+    --text: #0f172a;
+    --text-2: #475569;
+    --text-3: #94a3b8;
+    --danger: #ef4444;
+    --danger-light: #fee2e2;
+    --radius: 12px;
+    --shadow: 0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.04);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --surface: #1e293b;
+      --surface-1: #0f172a;
+      --border: #334155;
+      --border-strong: #475569;
+      --text: #f1f5f9;
+      --text-2: #94a3b8;
+      --text-3: #64748b;
+      --accent-light: #1e3a5f;
+      --purple-light: #2e1065;
+      --green-light: #052e16;
+      --danger-light: #450a0a;
+      --shadow: 0 1px 3px rgba(0,0,0,.3);
+    }
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--surface-1); color: var(--text); min-height: 100dvh; }
+
+  /* Header */
+  .header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 14px 16px 0; position: sticky; top: 0; z-index: 100; box-shadow: var(--shadow); }
+  .header-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+  .app-title { font-size: 17px; font-weight: 600; color: var(--text); display: flex; align-items: center; gap: 8px; }
+  .user-toggle { display: flex; gap: 6px; }
+  .user-btn { padding: 5px 12px; border-radius: 20px; border: 1px solid var(--border); background: var(--surface-1); font-size: 13px; color: var(--text-2); cursor: pointer; font-weight: 500; transition: all .15s; }
+  .user-btn.active-me { background: var(--accent-light); border-color: var(--accent); color: var(--accent); }
+  .user-btn.active-partner { background: var(--purple-light); border-color: var(--purple); color: var(--purple); }
+
+  /* Week nav */
+  .week-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+  .week-label { font-size: 14px; font-weight: 500; color: var(--text-2); }
+  .week-arrow { background: none; border: none; color: var(--text-3); font-size: 22px; cursor: pointer; padding: 0 8px; line-height: 1; }
+  .week-arrow:hover { color: var(--text); }
+
+  /* Days strip */
+  .days-strip { display: flex; gap: 4px; overflow-x: auto; padding-bottom: 1px; scrollbar-width: none; }
+  .days-strip::-webkit-scrollbar { display: none; }
+  .day-chip { flex-shrink: 0; width: 44px; padding: 6px 0 8px; border-radius: 10px 10px 0 0; text-align: center; cursor: pointer; border-bottom: 2px solid transparent; }
+  .day-chip .dn { font-size: 10px; font-weight: 500; color: var(--text-3); text-transform: uppercase; letter-spacing: .4px; }
+  .day-chip .dd { font-size: 16px; font-weight: 500; color: var(--text-2); line-height: 1.3; }
+  .day-chip.today .dd { font-weight: 700; color: var(--text); }
+  .day-chip.active { border-bottom-color: var(--accent); }
+  .day-chip.active .dd, .day-chip.active .dn { color: var(--accent); }
+  .day-dot { width: 4px; height: 4px; border-radius: 50%; background: var(--accent); margin: 2px auto 0; opacity: 0; }
+  .day-chip.has-ev .day-dot { opacity: 1; }
+  .day-chip.active .day-dot { background: var(--accent); }
+
+  /* Main */
+  .main { padding: 16px; padding-bottom: 90px; }
+  .day-title { font-size: 18px; font-weight: 600; color: var(--text); margin-bottom: 14px; }
+
+  /* Event card */
+  .event-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; margin-bottom: 10px; display: flex; gap: 12px; align-items: flex-start; position: relative; box-shadow: var(--shadow); }
+  .ev-icon { width: 42px; height: 42px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; }
+  .ev-icon.depose { background: var(--green-light); }
+  .ev-icon.recupere { background: var(--purple-light); }
+  .ev-body { flex: 1; min-width: 0; }
+  .ev-type { font-size: 15px; font-weight: 600; color: var(--text); }
+  .ev-time { font-size: 13px; color: var(--text-2); margin-top: 1px; }
+  .ev-lieu { font-size: 13px; color: var(--text-2); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ev-tags { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+  .tag { font-size: 11px; font-weight: 500; padding: 3px 8px; border-radius: 20px; }
+  .tag-me { background: var(--accent-light); color: var(--accent); }
+  .tag-partner { background: var(--purple-light); color: var(--purple); }
+  .tag-recur { background: var(--surface-1); color: var(--text-3); border: 1px solid var(--border); }
+  .del-btn { position: absolute; top: 10px; right: 10px; background: none; border: none; color: var(--text-3); cursor: pointer; font-size: 18px; width: 28px; height: 28px; border-radius: 6px; display: flex; align-items: center; justify-content: center; }
+  .del-btn:hover { background: var(--danger-light); color: var(--danger); }
+
+  /* Empty */
+  .empty { text-align: center; padding: 48px 20px; }
+  .empty-emoji { font-size: 48px; margin-bottom: 12px; }
+  .empty p { font-size: 15px; color: var(--text-3); }
+
+  /* FAB */
+  .fab { position: fixed; bottom: 28px; right: 20px; width: 58px; height: 58px; border-radius: 50%; background: var(--accent); border: none; color: #fff; font-size: 28px; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 20px rgba(37,99,235,.4); z-index: 200; transition: transform .15s; }
+  .fab:active { transform: scale(.94); }
+
+  /* Modal */
+  .overlay { position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 300; display: flex; align-items: flex-end; opacity: 0; pointer-events: none; transition: opacity .2s; }
+  .overlay.open { opacity: 1; pointer-events: all; }
+  .sheet { background: var(--surface); border-radius: 20px 20px 0 0; padding: 0 0 env(safe-area-inset-bottom, 16px); width: 100%; max-height: 92dvh; overflow-y: auto; transform: translateY(100%); transition: transform .25s cubic-bezier(.32,1.1,.6,1); }
+  .overlay.open .sheet { transform: translateY(0); }
+  .sheet-handle { width: 36px; height: 4px; background: var(--border-strong); border-radius: 2px; margin: 12px auto 20px; }
+  .sheet-title { font-size: 18px; font-weight: 600; padding: 0 20px 20px; color: var(--text); }
+  .form-body { padding: 0 20px 24px; }
+  .form-group { margin-bottom: 18px; }
+  .form-label { font-size: 13px; font-weight: 500; color: var(--text-2); margin-bottom: 8px; display: block; }
+  .seg { display: flex; background: var(--surface-1); border: 1px solid var(--border); border-radius: 10px; padding: 3px; gap: 3px; }
+  .seg-btn { flex: 1; padding: 9px 6px; border: none; border-radius: 7px; background: transparent; font-size: 14px; font-weight: 500; color: var(--text-2); cursor: pointer; transition: all .15s; text-align: center; }
+  .seg-btn.sel { background: var(--surface); box-shadow: 0 1px 4px rgba(0,0,0,.1); color: var(--text); }
+  .seg-btn.sel.depose { color: var(--green); }
+  .seg-btn.sel.recupere { color: var(--purple); }
+  .seg-btn.sel.me { color: var(--accent); }
+  .seg-btn.sel.partner { color: var(--purple); }
+  .form-input { width: 100%; padding: 11px 14px; border: 1px solid var(--border-strong); border-radius: 10px; font-size: 15px; background: var(--surface); color: var(--text); outline: none; -webkit-appearance: none; }
+  .form-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(37,99,235,.1); }
+  .recur-row { display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface-1); }
+  .recur-label { font-size: 14px; color: var(--text); }
+  .recur-sub { font-size: 12px; color: var(--text-3); margin-top: 1px; }
+  .toggle { width: 44px; height: 26px; border-radius: 13px; background: var(--border-strong); border: none; cursor: pointer; position: relative; transition: background .2s; flex-shrink: 0; }
+  .toggle.on { background: var(--accent); }
+  .toggle::after { content: ''; position: absolute; width: 20px; height: 20px; border-radius: 50%; background: #fff; top: 3px; left: 3px; transition: transform .2s; box-shadow: 0 1px 3px rgba(0,0,0,.2); }
+  .toggle.on::after { transform: translateX(18px); }
+  .btn-save { width: 100%; padding: 15px; background: var(--accent); border: none; border-radius: 12px; color: #fff; font-size: 16px; font-weight: 600; cursor: pointer; margin-top: 4px; }
+  .btn-save:active { background: var(--accent-dark); }
+  .btn-cancel { width: 100%; padding: 13px; background: transparent; border: 1px solid var(--border); border-radius: 12px; color: var(--text-2); font-size: 15px; cursor: pointer; margin-top: 10px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-top">
+    <div class="app-title">👨‍👩‍👧 Agenda famille</div>
+    <div class="user-toggle">
+      <button class="user-btn active-me" id="btn-me" onclick="switchUser('moi')">Moi</button>
+      <button class="user-btn" id="btn-partner" onclick="switchUser('conjoint')">Conjoint(e)</button>
+    </div>
+  </div>
+  <div class="week-nav">
+    <button class="week-arrow" onclick="changeWeek(-1)">‹</button>
+    <span class="week-label" id="week-label"></span>
+    <button class="week-arrow" onclick="changeWeek(1)">›</button>
+  </div>
+  <div class="days-strip" id="days-strip"></div>
+</div>
+
+<div class="main" id="main"></div>
+
+<button class="fab" onclick="openModal()" aria-label="Ajouter un trajet">+</button>
+
+<div class="overlay" id="overlay" onclick="closeModal(event)">
+  <div class="sheet" onclick="event.stopPropagation()">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">Nouveau trajet</div>
+    <div class="form-body">
+      <div class="form-group">
+        <label class="form-label">Type de trajet</label>
+        <div class="seg">
+          <button class="seg-btn sel depose" id="t-depose" onclick="selType('depose')">🚗 Dépose</button>
+          <button class="seg-btn recupere" id="t-recupere" onclick="selType('recupere')">🏫 Récupération</button>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Date</label>
+        <input type="date" class="form-input" id="f-date">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Heure</label>
+        <input type="time" class="form-input" id="f-time">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Lieu (école, activité…)</label>
+        <input type="text" class="form-input" id="f-lieu" placeholder="École primaire Victor Hugo">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Qui s'en charge ?</label>
+        <div class="seg">
+          <button class="seg-btn sel me" id="w-moi" onclick="selWho('moi')">👤 Moi</button>
+          <button class="seg-btn partner" id="w-conjoint" onclick="selWho('conjoint')">👤 Conjoint(e)</button>
+        </div>
+      </div>
+      <div class="form-group">
+        <div class="recur-row">
+          <div>
+            <div class="recur-label">Répéter chaque semaine</div>
+            <div class="recur-sub">Crée l'événement sur 12 semaines</div>
+          </div>
+          <button class="toggle" id="recur-btn" onclick="toggleRecur()"></button>
+        </div>
+      </div>
+      <button class="btn-save" onclick="saveEvent()">Enregistrer le trajet</button>
+      <button class="btn-cancel" onclick="closeModal()">Annuler</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const DAYS_FR = ['Dim','Lun','Mar','Mer','Jeu','Ven','Sam'];
+const MONTHS_FR = ['jan','fév','mar','avr','mai','jun','jul','aoû','sep','oct','nov','déc'];
+const MONTHS_FULL = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
+const STORE_KEY = 'agenda_famille_v2';
+
+let events = [];
+let currentUser = 'moi';
+let selectedDay = toKey(new Date());
+let weekOffset = 0;
+let fType = 'depose', fWho = 'moi', fRecur = false;
+
+function toKey(d) { return d.toISOString().split('T')[0]; }
+function todayKey() { return toKey(new Date()); }
+
+function getWeekDates(offset) {
+  const today = new Date();
+  const dow = today.getDay();
+  const mon = new Date(today);
+  mon.setDate(today.getDate() - (dow === 0 ? 6 : dow - 1) + offset * 7);
+  return Array.from({length:7}, (_,i) => { const d = new Date(mon); d.setDate(mon.getDate()+i); return d; });
+}
+
+function load() {
+  try { const s = localStorage.getItem(STORE_KEY); if(s) events = JSON.parse(s); } catch(e) { events = []; }
+}
+function save() {
+  try { localStorage.setItem(STORE_KEY, JSON.stringify(events)); } catch(e) {}
+}
+
+function switchUser(u) {
+  currentUser = u;
+  document.getElementById('btn-me').className = 'user-btn' + (u==='moi' ? ' active-me' : '');
+  document.getElementById('btn-partner').className = 'user-btn' + (u==='conjoint' ? ' active-partner' : '');
+}
+
+function changeWeek(d) {
+  weekOffset += d;
+  const days = getWeekDates(weekOffset);
+  if(!days.find(x => toKey(x) === selectedDay)) selectedDay = toKey(days[0]);
+  render();
+}
+
+function selDay(k) { selectedDay = k; render(); }
+
+function render() {
+  const days = getWeekDates(weekOffset);
+  const tk = todayKey();
+  const evDays = new Set(events.map(e => e.date));
+  const f = days[0], l = days[6];
+  document.getElementById('week-label').textContent =
+    `${f.getDate()} ${MONTHS_FR[f.getMonth()]} – ${l.getDate()} ${MONTHS_FR[l.getMonth()]} ${l.getFullYear()}`;
+  document.getElementById('days-strip').innerHTML = days.map(d => {
+    const k = toKey(d);
+    return `<div class="day-chip${k===selectedDay?' active':''}${k===tk?' today':''}${evDays.has(k)?' has-ev':''}" onclick="selDay('${k}')">
+      <div class="dn">${DAYS_FR[d.getDay()]}</div>
+      <div class="dd">${d.getDate()}</div>
+      <div class="day-dot"></div>
+    </div>`;
+  }).join('');
+  renderEvents();
+}
+
+function renderEvents() {
+  const d = new Date(selectedDay + 'T12:00:00');
+  const title = `${DAYS_FR[d.getDay()]} ${d.getDate()} ${MONTHS_FULL[d.getMonth()]}`;
+  const dayEvs = events.filter(e => e.date === selectedDay).sort((a,b) => a.time.localeCompare(b.time));
+  const main = document.getElementById('main');
+  if(!dayEvs.length) {
+    main.innerHTML = `<div class="day-title">${title}</div><div class="empty"><div class="empty-emoji">📅</div><p>Aucun trajet ce jour-là</p></div>`;
+    return;
+  }
+  main.innerHTML = `<div class="day-title">${title}</div>` + dayEvs.map(ev => `
+    <div class="event-card">
+      <div class="ev-icon ${ev.type}">${ev.type==='depose'?'🚗':'🏫'}</div>
+      <div class="ev-body">
+        <div class="ev-type">${ev.type==='depose'?'Dépose':'Récupération'}</div>
+        <div class="ev-time">${ev.time}</div>
+        ${ev.lieu ? `<div class="ev-lieu">📍 ${ev.lieu}</div>` : ''}
+        <div class="ev-tags">
+          <span class="tag ${ev.who==='moi'?'tag-me':'tag-partner'}">${ev.who==='moi'?'Moi':'Conjoint(e)'}</span>
+          ${ev.recur ? '<span class="tag tag-recur">🔁 hebdo</span>' : ''}
+        </div>
+      </div>
+      <button class="del-btn" onclick="deleteEvent('${ev.id}')" aria-label="Supprimer">✕</button>
+    </div>`).join('');
+}
+
+function openModal() {
+  document.getElementById('f-date').value = selectedDay;
+  document.getElementById('f-time').value = '08:30';
+  document.getElementById('f-lieu').value = '';
+  fType='depose'; fWho='moi'; fRecur=false;
+  selType('depose'); selWho('moi');
+  document.getElementById('recur-btn').className = 'toggle';
+  document.getElementById('overlay').classList.add('open');
+}
+
+function closeModal(e) {
+  if(!e || e.target===document.getElementById('overlay'))
+    document.getElementById('overlay').classList.remove('open');
+}
+
+function selType(t) {
+  fType = t;
+  ['depose','recupere'].forEach(x => {
+    const b = document.getElementById('t-'+x);
+    b.className = 'seg-btn' + (x===t?' sel '+x:' '+x);
+  });
+}
+
+function selWho(w) {
+  fWho = w;
+  document.getElementById('w-moi').className = 'seg-btn' + (w==='moi'?' sel me':' me');
+  document.getElementById('w-conjoint').className = 'seg-btn' + (w==='conjoint'?' sel partner':' partner');
+}
+
+function toggleRecur() {
+  fRecur = !fRecur;
+  document.getElementById('recur-btn').className = 'toggle' + (fRecur?' on':'');
+}
+
+function saveEvent() {
+  const date = document.getElementById('f-date').value;
+  const time = document.getElementById('f-time').value;
+  const lieu = document.getElementById('f-lieu').value.trim();
+  if(!date || !time) return;
+  const base = { type:fType, time, lieu, who:fWho, recur:fRecur };
+  if(fRecur) {
+    const grp = Date.now();
+    for(let w=0; w<12; w++) {
+      const d = new Date(date+'T12:00:00');
+      d.setDate(d.getDate()+w*7);
+      events.push({...base, id:`${grp}_${w}`, date:toKey(d), recurGroup:grp});
+    }
+  } else {
+    events.push({...base, id:String(Date.now()), date});
+  }
+  save();
+  closeModal();
+  selectedDay = date;
+  const days = getWeekDates(weekOffset);
+  if(!days.find(x => toKey(x) === date)) {
+    const target = new Date(date+'T12:00:00');
+    const diff = Math.round((target - new Date()) / (7*24*3600*1000));
+    weekOffset = diff >= 0 ? Math.floor(diff) : Math.ceil(diff);
+  }
+  render();
+}
+
+function deleteEvent(id) {
+  if(!confirm('Supprimer ce trajet ?')) return;
+  events = events.filter(e => e.id !== id);
+  save();
+  render();
+}
+
+load();
+render();
+</script>
+</body>
+</html>
