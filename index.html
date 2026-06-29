@@ -13,6 +13,7 @@
     --accent: #2563eb; --accent-light: #dbeafe; --accent-dark: #1d4ed8;
     --purple: #7c3aed; --purple-light: #ede9fe;
     --green-light: #dcfce7; --green: #16a34a;
+    --amber: #d97706; --amber-light: #fef3c7;
     --surface: #ffffff; --surface-1: #f8fafc;
     --border: #e2e8f0; --border-strong: #cbd5e1;
     --text: #0f172a; --text-2: #475569; --text-3: #94a3b8;
@@ -25,14 +26,13 @@
       --border: #334155; --border-strong: #475569;
       --text: #f1f5f9; --text-2: #94a3b8; --text-3: #64748b;
       --accent-light: #1e3a5f; --purple-light: #2e1065;
-      --green-light: #052e16; --danger-light: #450a0a;
-      --shadow: 0 1px 3px rgba(0,0,0,.3);
+      --green-light: #052e16; --amber-light: #451a03;
+      --danger-light: #450a0a; --shadow: 0 1px 3px rgba(0,0,0,.3);
     }
   }
   * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
   body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--surface-1); color: var(--text); min-height: 100dvh; }
 
-  /* Lock */
   .lock-screen { position: fixed; inset: 0; background: var(--surface-1); z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 24px; }
   .lock-card { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 32px 24px; width: 100%; max-width: 360px; text-align: center; box-shadow: var(--shadow); }
   .lock-emoji { font-size: 48px; margin-bottom: 16px; }
@@ -43,7 +43,6 @@
   .lock-btn { width: 100%; padding: 14px; background: var(--accent); border: none; border-radius: 10px; color: #fff; font-size: 16px; font-weight: 600; cursor: pointer; }
   .lock-error { font-size: 13px; color: var(--danger); margin-top: 10px; min-height: 18px; }
 
-  /* Header */
   .header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 14px 16px 0; position: sticky; top: 0; z-index: 100; box-shadow: var(--shadow); }
   .header-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
   .app-title { font-size: 17px; font-weight: 600; color: var(--text); display: flex; align-items: center; gap: 8px; }
@@ -51,25 +50,21 @@
   .sync-dot.online { background: #16a34a; }
   .sync-dot.syncing { background: #f59e0b; animation: pulse 1s infinite; }
   @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
-  .header-actions { display: flex; align-items: center; gap: 8px; }
+  .header-actions { display: flex; align-items: center; gap: 6px; }
   .user-toggle { display: flex; gap: 4px; }
   .user-btn { padding: 5px 10px; border-radius: 20px; border: 1px solid var(--border); background: var(--surface-1); font-size: 13px; color: var(--text-2); cursor: pointer; font-weight: 500; }
   .user-btn.active-me { background: var(--accent-light); border-color: var(--accent); color: var(--accent); }
   .user-btn.active-partner { background: var(--purple-light); border-color: var(--purple); color: var(--purple); }
-  .export-btn { padding: 5px 10px; border-radius: 20px; border: 1px solid var(--border); background: var(--surface-1); font-size: 13px; color: var(--text-2); cursor: pointer; font-weight: 500; white-space: nowrap; }
-  .export-btn:hover { background: var(--surface); border-color: var(--border-strong); }
+  .icon-btn { padding: 5px 10px; border-radius: 20px; border: 1px solid var(--border); background: var(--surface-1); font-size: 13px; color: var(--text-2); cursor: pointer; }
 
-  /* View toggle */
   .view-toggle { display: flex; background: var(--surface-1); border: 1px solid var(--border); border-radius: 8px; padding: 2px; gap: 2px; margin-bottom: 12px; }
   .view-btn { flex: 1; padding: 6px; border: none; border-radius: 6px; background: transparent; font-size: 13px; font-weight: 500; color: var(--text-2); cursor: pointer; }
   .view-btn.active { background: var(--surface); color: var(--text); box-shadow: 0 1px 3px rgba(0,0,0,.08); }
 
-  /* Week nav */
   .nav-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
   .nav-label { font-size: 14px; font-weight: 500; color: var(--text-2); }
   .nav-arrow { background: none; border: none; color: var(--text-3); font-size: 22px; cursor: pointer; padding: 0 8px; line-height: 1; }
 
-  /* Week strip */
   .days-strip { display: flex; gap: 4px; overflow-x: auto; padding-bottom: 1px; scrollbar-width: none; }
   .days-strip::-webkit-scrollbar { display: none; }
   .day-chip { flex-shrink: 0; width: 44px; padding: 6px 0 8px; border-radius: 10px 10px 0 0; text-align: center; cursor: pointer; border-bottom: 2px solid transparent; }
@@ -81,12 +76,11 @@
   .day-dot { width: 4px; height: 4px; border-radius: 50%; background: var(--accent); margin: 2px auto 0; opacity: 0; }
   .day-chip.has-ev .day-dot { opacity: 1; }
 
-  /* Month grid */
   .month-grid { padding: 0 0 4px; }
   .month-dow { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; margin-bottom: 4px; }
   .month-dow-label { font-size: 10px; font-weight: 500; color: var(--text-3); text-align: center; text-transform: uppercase; padding: 4px 0; }
   .month-days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
-  .month-day { min-height: 44px; padding: 4px; border-radius: 8px; cursor: pointer; position: relative; }
+  .month-day { min-height: 44px; padding: 4px; border-radius: 8px; cursor: pointer; }
   .month-day:hover { background: var(--surface-1); }
   .month-day.other-month .mdd { color: var(--text-3); }
   .month-day.today { background: var(--accent-light); }
@@ -98,16 +92,16 @@
   .month-dot { width: 5px; height: 5px; border-radius: 50%; }
   .month-dot.depose { background: var(--green); }
   .month-dot.recupere { background: var(--purple); }
+  .month-dot.activite { background: var(--amber); }
 
-  /* Main */
   .main { padding: 16px; padding-bottom: 90px; }
   .day-title { font-size: 18px; font-weight: 600; color: var(--text); margin-bottom: 14px; }
 
-  /* Event cards */
   .event-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; margin-bottom: 10px; display: flex; gap: 12px; align-items: flex-start; position: relative; box-shadow: var(--shadow); }
   .ev-icon { width: 42px; height: 42px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; }
   .ev-icon.depose { background: var(--green-light); }
   .ev-icon.recupere { background: var(--purple-light); }
+  .ev-icon.activite { background: var(--amber-light); }
   .ev-body { flex: 1; min-width: 0; }
   .ev-type { font-size: 15px; font-weight: 600; color: var(--text); }
   .ev-time { font-size: 13px; color: var(--text-2); margin-top: 1px; }
@@ -128,7 +122,6 @@
   .fab { position: fixed; bottom: 28px; right: 20px; width: 58px; height: 58px; border-radius: 50%; background: var(--accent); border: none; color: #fff; font-size: 28px; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 20px rgba(37,99,235,.4); z-index: 200; transition: transform .15s; }
   .fab:active { transform: scale(.94); }
 
-  /* Modal */
   .overlay { position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 300; display: flex; align-items: flex-end; opacity: 0; pointer-events: none; transition: opacity .2s; }
   .overlay.open { opacity: 1; pointer-events: all; }
   .sheet { background: var(--surface); border-radius: 20px 20px 0 0; padding: 0 0 env(safe-area-inset-bottom, 16px); width: 100%; max-height: 92dvh; overflow-y: auto; transform: translateY(100%); transition: transform .25s cubic-bezier(.32,1.1,.6,1); }
@@ -139,14 +132,17 @@
   .form-group { margin-bottom: 18px; }
   .form-label { font-size: 13px; font-weight: 500; color: var(--text-2); margin-bottom: 8px; display: block; }
   .seg { display: flex; background: var(--surface-1); border: 1px solid var(--border); border-radius: 10px; padding: 3px; gap: 3px; }
-  .seg-btn { flex: 1; padding: 9px 6px; border: none; border-radius: 7px; background: transparent; font-size: 14px; font-weight: 500; color: var(--text-2); cursor: pointer; text-align: center; }
+  .seg-btn { flex: 1; padding: 9px 4px; border: none; border-radius: 7px; background: transparent; font-size: 13px; font-weight: 500; color: var(--text-2); cursor: pointer; text-align: center; }
   .seg-btn.sel { background: var(--surface); box-shadow: 0 1px 4px rgba(0,0,0,.1); color: var(--text); }
   .seg-btn.sel.depose { color: var(--green); }
   .seg-btn.sel.recupere { color: var(--purple); }
+  .seg-btn.sel.activite { color: var(--amber); }
   .seg-btn.sel.val { color: var(--accent); }
   .seg-btn.sel.alex { color: var(--purple); }
   .form-input { width: 100%; padding: 11px 14px; border: 1px solid var(--border-strong); border-radius: 10px; font-size: 15px; background: var(--surface); color: var(--text); outline: none; -webkit-appearance: none; }
   .form-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(37,99,235,.1); }
+  .time-row { display: flex; gap: 10px; }
+  .time-row .form-group { flex: 1; margin-bottom: 0; }
   .recur-row { display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface-1); }
   .recur-label { font-size: 14px; color: var(--text); }
   .recur-sub { font-size: 12px; color: var(--text-3); margin-top: 1px; }
@@ -157,6 +153,9 @@
   .btn-save { width: 100%; padding: 15px; background: var(--accent); border: none; border-radius: 12px; color: #fff; font-size: 16px; font-weight: 600; cursor: pointer; margin-top: 4px; }
   .btn-save:active { background: var(--accent-dark); }
   .btn-cancel { width: 100%; padding: 13px; background: transparent; border: 1px solid var(--border); border-radius: 12px; color: var(--text-2); font-size: 15px; cursor: pointer; margin-top: 10px; }
+  #endtime-group { display: none; }
+  #activite-name-group { display: none; }
+  #who-group { display: none; }
 </style>
 </head>
 <body>
@@ -175,12 +174,9 @@
 <div id="app-content" style="display:none">
   <div class="header">
     <div class="header-top">
-      <div class="app-title">
-        👨‍👩‍👧 Agenda famille
-        <span class="sync-dot" id="sync-dot"></span>
-      </div>
+      <div class="app-title">👨‍👩‍👧 Agenda famille <span class="sync-dot" id="sync-dot"></span></div>
       <div class="header-actions">
-        <button class="export-btn" onclick="exportICS()">📤 Export</button>
+        <button class="icon-btn" onclick="exportICS()">📤</button>
         <div class="user-toggle">
           <button class="user-btn active-me" id="btn-val" onclick="switchUser('val')">Val</button>
           <button class="user-btn" id="btn-alex" onclick="switchUser('alex')">Alex</button>
@@ -208,37 +204,47 @@
       <div class="month-grid" id="month-grid"></div>
     </div>
   </div>
-
   <div class="main" id="main"><div class="loading">Chargement…</div></div>
-  <button class="fab" onclick="openModal()" aria-label="Ajouter un trajet">+</button>
+  <button class="fab" onclick="openModal()">+</button>
 </div>
 
 <div class="overlay" id="overlay" onclick="closeModal(event)">
   <div class="sheet" onclick="event.stopPropagation()">
     <div class="sheet-handle"></div>
-    <div class="sheet-title">Nouveau trajet</div>
+    <div class="sheet-title" id="sheet-title">Nouvel événement</div>
     <div class="form-body">
       <div class="form-group">
-        <label class="form-label">Type de trajet</label>
+        <label class="form-label">Type</label>
         <div class="seg">
           <button class="seg-btn sel depose" id="t-depose" onclick="selType('depose')">🚗 Dépose</button>
-          <button class="seg-btn recupere" id="t-recupere" onclick="selType('recupere')">🏫 Récupération</button>
+          <button class="seg-btn recupere" id="t-recupere" onclick="selType('recupere')">🏫 Récup.</button>
+          <button class="seg-btn activite" id="t-activite" onclick="selType('activite')">⭐ Activité</button>
         </div>
+      </div>
+      <div class="form-group" id="activite-name-group">
+        <label class="form-label">Nom de l'activité</label>
+        <input type="text" class="form-input" id="f-activite-name" placeholder="Natation, foot, piano…">
       </div>
       <div class="form-group">
         <label class="form-label">Date</label>
         <input type="date" class="form-input" id="f-date">
       </div>
-      <div class="form-group">
-        <label class="form-label">Heure</label>
-        <input type="time" class="form-input" id="f-time">
+      <div class="time-row">
+        <div class="form-group">
+          <label class="form-label">Heure de début</label>
+          <input type="time" class="form-input" id="f-time">
+        </div>
+        <div class="form-group" id="endtime-group">
+          <label class="form-label">Heure de fin</label>
+          <input type="time" class="form-input" id="f-endtime">
+        </div>
       </div>
       <div class="form-group">
-        <label class="form-label">Lieu (école, activité…)</label>
-        <input type="text" class="form-input" id="f-lieu" placeholder="École primaire Victor Hugo">
+        <label class="form-label">Lieu</label>
+        <input type="text" class="form-input" id="f-lieu" placeholder="École, piscine…">
       </div>
-      <div class="form-group">
-        <label class="form-label">Qui s'en charge ?</label>
+      <div class="form-group" id="who-group">
+        <label class="form-label">Qui accompagne ?</label>
         <div class="seg">
           <button class="seg-btn sel val" id="w-val" onclick="selWho('val')">👤 Val</button>
           <button class="seg-btn alex" id="w-alex" onclick="selWho('alex')">👤 Alex</button>
@@ -253,7 +259,7 @@
           <button class="toggle" id="recur-btn" onclick="toggleRecur()"></button>
         </div>
       </div>
-      <button class="btn-save" onclick="saveEvent()">Enregistrer le trajet</button>
+      <button class="btn-save" onclick="saveEvent()">Enregistrer</button>
       <button class="btn-cancel" onclick="closeModal()">Annuler</button>
     </div>
   </div>
@@ -265,7 +271,6 @@ import { getDatabase, ref, onValue, push, remove } from "https://www.gstatic.com
 
 const CODE = "Anna2026!";
 const SESSION_KEY = "agenda_famille_auth";
-
 const firebaseConfig = {
   apiKey: "AIzaSyApJGkj4NbwrUKhEUGT4q6w7mYkVRll1-o",
   authDomain: "agenda-famille-6b71f.firebaseapp.com",
@@ -287,8 +292,7 @@ const MONTHS_FULL = ['janvier','février','mars','avril','mai','juin','juillet',
 let events = {};
 let currentUser = 'val';
 let selectedDay = toKey(new Date());
-let weekOffset = 0;
-let monthOffset = 0;
+let weekOffset = 0, monthOffset = 0;
 let currentView = 'week';
 let fType = 'depose', fWho = 'val', fRecur = false;
 
@@ -297,8 +301,7 @@ function todayKey() { return toKey(new Date()); }
 function setSyncStatus(s) { document.getElementById('sync-dot').className = 'sync-dot ' + s; }
 
 window.unlock = function() {
-  const val = document.getElementById('lock-input').value;
-  if(val === CODE) {
+  if(document.getElementById('lock-input').value === CODE) {
     sessionStorage.setItem(SESSION_KEY, '1');
     document.getElementById('lock-screen').style.display = 'none';
     document.getElementById('app-content').style.display = 'block';
@@ -317,25 +320,21 @@ if(sessionStorage.getItem(SESSION_KEY) === '1') {
 
 function startApp() {
   setSyncStatus('syncing');
-  onValue(eventsRef, (snapshot) => {
-    events = snapshot.val() || {};
-    setSyncStatus('online');
-    render();
-  });
+  onValue(eventsRef, snap => { events = snap.val() || {}; setSyncStatus('online'); render(); });
 }
 
 window.switchUser = function(u) {
   currentUser = u;
-  document.getElementById('btn-val').className = 'user-btn' + (u==='val' ? ' active-me' : '');
-  document.getElementById('btn-alex').className = 'user-btn' + (u==='alex' ? ' active-partner' : '');
+  document.getElementById('btn-val').className = 'user-btn' + (u==='val'?' active-me':'');
+  document.getElementById('btn-alex').className = 'user-btn' + (u==='alex'?' active-partner':'');
 }
 
 window.setView = function(v) {
   currentView = v;
-  document.getElementById('view-week').className = 'view-btn' + (v==='week'?' active':'');
-  document.getElementById('view-month').className = 'view-btn' + (v==='month'?' active':'');
-  document.getElementById('week-header').style.display = v==='week' ? '' : 'none';
-  document.getElementById('month-header').style.display = v==='month' ? '' : 'none';
+  document.getElementById('view-week').className = 'view-btn'+(v==='week'?' active':'');
+  document.getElementById('view-month').className = 'view-btn'+(v==='month'?' active':'');
+  document.getElementById('week-header').style.display = v==='week'?'':'none';
+  document.getElementById('month-header').style.display = v==='month'?'':'none';
   render();
 }
 
@@ -345,151 +344,110 @@ window.changeWeek = function(d) {
   if(!days.find(x => toKey(x) === selectedDay)) selectedDay = toKey(days[0]);
   render();
 }
-
-window.changeMonth = function(d) {
-  monthOffset += d;
-  render();
-}
+window.changeMonth = function(d) { monthOffset += d; render(); }
+window.selDay = function(k) { selectedDay = k; render(); }
 
 function getWeekDates(offset) {
-  const today = new Date();
-  const dow = today.getDay();
+  const today = new Date(); const dow = today.getDay();
   const mon = new Date(today);
-  mon.setDate(today.getDate() - (dow === 0 ? 6 : dow - 1) + offset * 7);
-  return Array.from({length:7}, (_,i) => { const d = new Date(mon); d.setDate(mon.getDate()+i); return d; });
+  mon.setDate(today.getDate() - (dow===0?6:dow-1) + offset*7);
+  return Array.from({length:7}, (_,i) => { const d=new Date(mon); d.setDate(mon.getDate()+i); return d; });
 }
 
 function getMonthDates(offset) {
   const today = new Date();
-  const base = new Date(today.getFullYear(), today.getMonth() + offset, 1);
+  const base = new Date(today.getFullYear(), today.getMonth()+offset, 1);
   const year = base.getFullYear(), month = base.getMonth();
-  const first = new Date(year, month, 1);
-  const last = new Date(year, month + 1, 0);
-  const startDow = first.getDay() === 0 ? 6 : first.getDay() - 1;
+  const first = new Date(year, month, 1), last = new Date(year, month+1, 0);
+  const startDow = first.getDay()===0?6:first.getDay()-1;
+  const endDow = last.getDay()===0?6:last.getDay()-1;
   const days = [];
-  for(let i = -startDow; i <= last.getDate() - 1 + (6 - (last.getDay() === 0 ? 6 : last.getDay() - 1)); i++) {
-    days.push(new Date(year, month, 1 + i));
-  }
+  for(let i=-startDow; i<=last.getDate()-1+(6-endDow); i++)
+    days.push(new Date(year, month, 1+i));
   return { days, month, year };
 }
 
-window.selDay = function(k) { selectedDay = k; render(); }
-
 function render() {
-  if(currentView === 'week') renderWeek();
-  else renderMonth();
+  if(currentView==='week') renderWeek(); else renderMonth();
   renderEvents();
 }
 
 function renderWeek() {
   const days = getWeekDates(weekOffset);
   const tk = todayKey();
-  const evList = Object.values(events);
-  const evDays = new Set(evList.map(e => e.date));
-  const f = days[0], l = days[6];
-  document.getElementById('week-label').textContent =
-    `${f.getDate()} ${MONTHS_FR[f.getMonth()]} – ${l.getDate()} ${MONTHS_FR[l.getMonth()]} ${l.getFullYear()}`;
+  const evDays = new Set(Object.values(events).map(e=>e.date));
+  const f=days[0], l=days[6];
+  document.getElementById('week-label').textContent = `${f.getDate()} ${MONTHS_FR[f.getMonth()]} – ${l.getDate()} ${MONTHS_FR[l.getMonth()]} ${l.getFullYear()}`;
   document.getElementById('days-strip').innerHTML = days.map(d => {
-    const k = toKey(d);
+    const k=toKey(d);
     return `<div class="day-chip${k===selectedDay?' active':''}${k===tk?' today':''}${evDays.has(k)?' has-ev':''}" onclick="selDay('${k}')">
-      <div class="dn">${DAYS_FR[d.getDay()]}</div>
-      <div class="dd">${d.getDate()}</div>
-      <div class="day-dot"></div>
-    </div>`;
+      <div class="dn">${DAYS_FR[d.getDay()]}</div><div class="dd">${d.getDate()}</div><div class="day-dot"></div></div>`;
   }).join('');
 }
 
 function renderMonth() {
   const { days, month, year } = getMonthDates(monthOffset);
   const tk = todayKey();
-  const evList = Object.values(events);
   document.getElementById('month-label').textContent = `${MONTHS_FULL[month]} ${year}`;
-  const dowLabels = ['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'];
-  let html = `<div class="month-dow">${dowLabels.map(d => `<div class="month-dow-label">${d}</div>`).join('')}</div><div class="month-days">`;
+  const dowL = ['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'];
+  let html = `<div class="month-dow">${dowL.map(d=>`<div class="month-dow-label">${d}</div>`).join('')}</div><div class="month-days">`;
   days.forEach(d => {
-    const k = toKey(d);
-    const isOther = d.getMonth() !== month;
-    const isToday = k === tk;
-    const isSel = k === selectedDay;
-    const dayEvs = evList.filter(e => e.date === k);
-    const dots = dayEvs.map(e => `<div class="month-dot ${e.type}"></div>`).join('');
+    const k=toKey(d), isOther=d.getMonth()!==month, isToday=k===tk, isSel=k===selectedDay;
+    const dayEvs = Object.values(events).filter(e=>e.date===k);
+    const dots = dayEvs.map(e=>`<div class="month-dot ${e.type}"></div>`).join('');
     html += `<div class="month-day${isOther?' other-month':''}${isToday&&!isSel?' today':''}${isSel?' selected':''}" onclick="selDay('${k}')">
-      <span class="mdd">${d.getDate()}</span>
-      ${dots ? `<div class="month-dots">${dots}</div>` : ''}
-    </div>`;
+      <span class="mdd">${d.getDate()}</span>${dots?`<div class="month-dots">${dots}</div>`:''}</div>`;
   });
-  html += '</div>';
-  document.getElementById('month-grid').innerHTML = html;
+  document.getElementById('month-grid').innerHTML = html+'</div>';
+}
+
+function evIcon(type) {
+  if(type==='depose') return '🚗';
+  if(type==='recupere') return '🏫';
+  return '⭐';
+}
+
+function evLabel(ev) {
+  if(ev.type==='depose') return 'Dépose Anna';
+  if(ev.type==='recupere') return 'Récupération Anna';
+  return ev.activiteName || 'Activité';
+}
+
+function evTimeLabel(ev) {
+  if(ev.endTime) return `${ev.time} → ${ev.endTime}`;
+  return ev.time;
 }
 
 function renderEvents() {
-  const d = new Date(selectedDay + 'T12:00:00');
+  const d = new Date(selectedDay+'T12:00:00');
   const title = `${DAYS_FR[d.getDay()]} ${d.getDate()} ${MONTHS_FULL[d.getMonth()]}`;
-  const dayEvs = Object.entries(events)
-    .filter(([,e]) => e.date === selectedDay)
-    .sort(([,a],[,b]) => a.time.localeCompare(b.time));
+  const dayEvs = Object.entries(events).filter(([,e])=>e.date===selectedDay).sort(([,a],[,b])=>a.time.localeCompare(b.time));
   const main = document.getElementById('main');
   if(!dayEvs.length) {
-    main.innerHTML = `<div class="day-title">${title}</div><div class="empty"><div class="empty-emoji">📅</div><p>Aucun trajet ce jour-là</p></div>`;
+    main.innerHTML = `<div class="day-title">${title}</div><div class="empty"><div class="empty-emoji">📅</div><p>Aucun événement ce jour-là</p></div>`;
     return;
   }
-  main.innerHTML = `<div class="day-title">${title}</div>` + dayEvs.map(([id, ev]) => `
-    <div class="event-card">
-      <div class="ev-icon ${ev.type}">${ev.type==='depose'?'🚗':'🏫'}</div>
+  main.innerHTML = `<div class="day-title">${title}</div>` + dayEvs.map(([id,ev]) => {
+    const whoTag = ev.who ? `<span class="tag tag-${ev.who}">${ev.who==='val'?'Val':'Alex'}</span>` : '';
+    return `<div class="event-card">
+      <div class="ev-icon ${ev.type}">${evIcon(ev.type)}</div>
       <div class="ev-body">
-        <div class="ev-type">${ev.type==='depose'?'Dépose Anna':'Récupération Anna'}</div>
-        <div class="ev-time">${ev.time}</div>
-        ${ev.lieu ? `<div class="ev-lieu">📍 ${ev.lieu}</div>` : ''}
-        <div class="ev-tags">
-          <span class="tag tag-${ev.who}">${ev.who==='val'?'Val':'Alex'}</span>
-          ${ev.recur ? '<span class="tag tag-recur">🔁 hebdo</span>' : ''}
-        </div>
+        <div class="ev-type">${evLabel(ev)}</div>
+        <div class="ev-time">${evTimeLabel(ev)}</div>
+        ${ev.lieu?`<div class="ev-lieu">📍 ${ev.lieu}</div>`:''}
+        <div class="ev-tags">${whoTag}${ev.recur?'<span class="tag tag-recur">🔁 hebdo</span>':''}</div>
       </div>
-      <button class="del-btn" onclick="deleteEvent('${id}')" aria-label="Supprimer">✕</button>
-    </div>`).join('');
-}
-
-window.exportICS = function() {
-  const today = todayKey();
-  const upcoming = Object.values(events).filter(e => e.date >= today);
-  if(!upcoming.length) { alert('Aucun trajet à venir à exporter.'); return; }
-
-  function icsDate(dateStr, timeStr) {
-    const [y,m,d] = dateStr.split('-');
-    const [h,min] = timeStr.split(':');
-    return `${y}${m}${d}T${h}${min}00`;
-  }
-
-  let ics = `BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//Agenda Famille//FR\r\nCALSCALE:GREGORIAN\r\n`;
-  upcoming.forEach(ev => {
-    const who = ev.who === 'val' ? 'Val' : 'Alex';
-    const type = ev.type === 'depose' ? 'Dépose Anna' : 'Récupération Anna';
-    const lieu = ev.lieu || '';
-    const dtstart = icsDate(ev.date, ev.time);
-    // Durée par défaut 30 min
-    const [h,m] = ev.time.split(':').map(Number);
-    const endH = String(h + (m >= 30 ? 1 : 0)).padStart(2,'0');
-    const endM = String((m + 30) % 60).padStart(2,'0');
-    const dtend = icsDate(ev.date, `${endH}:${endM}`);
-    const uid = `${ev.date}-${ev.time}-${ev.type}@agenda-famille`;
-    ics += `BEGIN:VEVENT\r\nUID:${uid}\r\nDTSTART:${dtstart}\r\nDTEND:${dtend}\r\nSUMMARY:${type} — ${who}\r\n`;
-    if(lieu) ics += `LOCATION:${lieu}\r\n`;
-    ics += `DESCRIPTION:Par ${who}${lieu ? ' à ' + lieu : ''}\r\nEND:VEVENT\r\n`;
-  });
-  ics += `END:VCALENDAR`;
-
-  const blob = new Blob([ics], { type: 'text/calendar;charset=utf-8' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url; a.download = 'agenda-famille.ics';
-  a.click();
-  URL.revokeObjectURL(url);
+      <button class="del-btn" onclick="deleteEvent('${id}')">✕</button>
+    </div>`;
+  }).join('');
 }
 
 window.openModal = function() {
   document.getElementById('f-date').value = selectedDay;
   document.getElementById('f-time').value = '08:30';
+  document.getElementById('f-endtime').value = '09:00';
   document.getElementById('f-lieu').value = '';
+  document.getElementById('f-activite-name').value = '';
   fType='depose'; fWho='val'; fRecur=false;
   selType('depose'); selWho('val');
   document.getElementById('recur-btn').className = 'toggle';
@@ -503,52 +461,84 @@ window.closeModal = function(e) {
 
 window.selType = function(t) {
   fType = t;
-  ['depose','recupere'].forEach(x => {
-    document.getElementById('t-'+x).className = 'seg-btn' + (x===t?' sel '+x:' '+x);
+  ['depose','recupere','activite'].forEach(x => {
+    document.getElementById('t-'+x).className = 'seg-btn'+(x===t?' sel '+x:' '+x);
   });
+  document.getElementById('endtime-group').style.display = t==='activite'?'block':'none';
+  document.getElementById('activite-name-group').style.display = t==='activite'?'block':'none';
+  document.getElementById('who-group').style.display = t==='activite'?'block':'none';
+  document.getElementById('sheet-title').textContent = t==='activite'?'Nouvelle activité':'Nouveau trajet';
 }
 
 window.selWho = function(w) {
   fWho = w;
-  document.getElementById('w-val').className = 'seg-btn' + (w==='val'?' sel val':' val');
-  document.getElementById('w-alex').className = 'seg-btn' + (w==='alex'?' sel alex':' alex');
+  document.getElementById('w-val').className = 'seg-btn'+(w==='val'?' sel val':' val');
+  document.getElementById('w-alex').className = 'seg-btn'+(w==='alex'?' sel alex':' alex');
 }
 
 window.toggleRecur = function() {
   fRecur = !fRecur;
-  document.getElementById('recur-btn').className = 'toggle' + (fRecur?' on':'');
+  document.getElementById('recur-btn').className = 'toggle'+(fRecur?' on':'');
 }
 
 window.saveEvent = async function() {
   const date = document.getElementById('f-date').value;
   const time = document.getElementById('f-time').value;
   const lieu = document.getElementById('f-lieu').value.trim();
-  if(!date || !time) return;
+  if(!date||!time) return;
   setSyncStatus('syncing');
-  const base = { type:fType, time, lieu, who:fWho, recur:fRecur, date };
+  const base = { type:fType, time, lieu, recur:fRecur, date };
+  if(fType==='activite') {
+    base.activiteName = document.getElementById('f-activite-name').value.trim() || 'Activité';
+    base.endTime = document.getElementById('f-endtime').value;
+    base.who = fWho;
+  }
   if(fRecur) {
-    for(let w=0; w<12; w++) {
-      const d = new Date(date+'T12:00:00');
-      d.setDate(d.getDate()+w*7);
+    for(let w=0;w<12;w++) {
+      const d=new Date(date+'T12:00:00'); d.setDate(d.getDate()+w*7);
       await push(eventsRef, {...base, date:toKey(d)});
     }
-  } else {
-    await push(eventsRef, base);
-  }
+  } else { await push(eventsRef, base); }
   closeModal();
   selectedDay = date;
   const days = getWeekDates(weekOffset);
-  if(!days.find(x => toKey(x) === date)) {
-    const target = new Date(date+'T12:00:00');
-    const diff = Math.round((target - new Date()) / (7*24*3600*1000));
-    weekOffset = diff >= 0 ? Math.floor(diff) : Math.ceil(diff);
+  if(!days.find(x=>toKey(x)===date)) {
+    const diff = Math.round((new Date(date+'T12:00:00')-new Date())/(7*24*3600*1000));
+    weekOffset = diff>=0?Math.floor(diff):Math.ceil(diff);
   }
 }
 
 window.deleteEvent = async function(id) {
-  if(!confirm('Supprimer ce trajet ?')) return;
+  if(!confirm('Supprimer cet événement ?')) return;
   setSyncStatus('syncing');
-  await remove(ref(db, 'events/' + id));
+  await remove(ref(db,'events/'+id));
+}
+
+window.exportICS = function() {
+  const today = todayKey();
+  const upcoming = Object.values(events).filter(e=>e.date>=today);
+  if(!upcoming.length) { alert('Aucun événement à venir.'); return; }
+  function icsDate(dateStr, timeStr) {
+    const [y,m,d]=dateStr.split('-'), [h,min]=timeStr.split(':');
+    return `${y}${m}${d}T${h}${min}00`;
+  }
+  let ics = `BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//Agenda Famille//FR\r\nCALSCALE:GREGORIAN\r\n`;
+  upcoming.forEach(ev => {
+    const dtstart = icsDate(ev.date, ev.time);
+    let endTime = ev.endTime || (() => {
+      const [h,m]=ev.time.split(':').map(Number);
+      return `${String(h+(m>=30?1:0)).padStart(2,'0')}:${String((m+30)%60).padStart(2,'0')}`;
+    })();
+    const dtend = icsDate(ev.date, endTime);
+    const summary = ev.type==='activite' ? (ev.activiteName||'Activité') + (ev.who?` — ${ev.who==='val'?'Val':'Alex'}`:'') : ev.type==='depose'?'Dépose Anna':'Récupération Anna';
+    ics += `BEGIN:VEVENT\r\nUID:${ev.date}-${ev.time}-${ev.type}@agenda-famille\r\nDTSTART:${dtstart}\r\nDTEND:${dtend}\r\nSUMMARY:${summary}\r\n`;
+    if(ev.lieu) ics += `LOCATION:${ev.lieu}\r\n`;
+    ics += `END:VEVENT\r\n`;
+  });
+  ics += `END:VCALENDAR`;
+  const blob = new Blob([ics],{type:'text/calendar;charset=utf-8'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download='agenda-famille.ics'; a.click();
 }
 </script>
 </body>
