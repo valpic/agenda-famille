@@ -451,6 +451,9 @@
           <button class="seg-btn" id="nd-120" onclick="setNotifDelay(120)">2h</button>
         </div>
       </div>
+      <div class="form-group" id="notif-disable-block" style="display:none">
+        <button class="tpl-btn danger" style="width:100%;padding:11px" onclick="disableNotifications()">🔕 Désactiver les notifications</button>
+      </div>
       <button class="btn-cancel" onclick="closeNotifSettings()">Fermer</button>
     </div>
   </div>
@@ -469,6 +472,7 @@
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getDatabase, ref, onValue, push, remove, set } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging.js";
 
 const CODE = "Anna2026!";
 const SESSION_KEY = "agenda_famille_auth";
@@ -486,6 +490,10 @@ const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 const eventsRef = ref(db, 'events');
 const templatesRef = ref(db, 'templates');
+const tokensRef = ref(db, 'pushTokens');
+const VAPID_KEY = "BJOkoTg07cbg4wOvUypMuPU8Dt-1coB21mtMxsLZdrv8Bv5ru_MceLGp3VH8j98MsZ7S76WahV7fXN6q7n6A3qo";
+let messaging = null;
+try { messaging = getMessaging(app); } catch(e) { console.log('Messaging non disponible', e); }
 
 const DAYS_FR = ['Dim','Lun','Mar','Mer','Jeu','Ven','Sam'];
 const MONTHS_FR = ['jan','fév','mar','avr','mai','jun','jul','aoû','sep','oct','nov','déc'];
@@ -508,8 +516,10 @@ let tplEvDayIndex = null;
 let teType = 'depose', teWho = 'val';
 let applyingTplId = null;
 const NOTIF_DELAY_KEY = 'agenda_famille_notif_delay';
+const NOTIF_ENABLED_KEY = 'agenda_famille_notif_enabled';
 let notifDelay = parseInt(localStorage.getItem(NOTIF_DELAY_KEY) || '30');
-let scheduledNotifTimers = [];
+let notifEnabled = localStorage.getItem(NOTIF_ENABLED_KEY) !== '0';
+let currentFcmToken = null;
 
 function toKey(d) {
   const y = d.getFullYear();
@@ -540,12 +550,32 @@ if(sessionStorage.getItem(SESSION_KEY) === '1') {
 
 function startApp() {
   setSyncStatus('syncing');
-  onValue(eventsRef, snap => { events = snap.val() || {}; setSyncStatus('online'); render(); scheduleAllNotifications(); });
+  onValue(eventsRef, snap => { events = snap.val() || {}; setSyncStatus('online'); render(); });
   onValue(templatesRef, snap => { templates = snap.val() || {}; render(); });
+  registerServiceWorker();
   updateNotifUI();
+  if(messaging) {
+    onMessage(messaging, (payload) => {
+      // Notification reçue alors que l'app est ouverte au premier plan
+      const title = payload.notification?.title || 'Agenda famille';
+      const body = payload.notification?.body || '';
+      if(Notification.permission === 'granted') {
+        new Notification(title, { body, icon: 'https://cdn-icons-png.flaticon.com/512/1057/1057068.png' });
+      }
+    });
+  }
 }
 
-// ====== NOTIFICATIONS LOCALES ======
+function registerServiceWorker() {
+  if('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/agenda-famille/firebase-messaging-sw.js').catch(() => {
+      // Fallback si l'app n'est pas servie depuis un sous-dossier /agenda-famille/
+      navigator.serviceWorker.register('./firebase-messaging-sw.js').catch(e => console.log('SW registration failed', e));
+    });
+  }
+}
+
+// ====== NOTIFICATIONS PUSH (Firebase Cloud Messaging) ======
 
 window.openNotifSettings = function() {
   updateNotifUI();
@@ -561,84 +591,88 @@ function updateNotifUI() {
   const statusEl = document.getElementById('notif-status');
   const enableBtn = document.getElementById('notif-enable-btn');
   const delayBlock = document.getElementById('notif-delay-block');
-  if(!('Notification' in window)) {
+  const disableBlock = document.getElementById('notif-disable-block');
+  if(!('Notification' in window) || !messaging) {
     statusEl.textContent = "Les notifications ne sont pas supportées sur ce navigateur.";
     enableBtn.style.display = 'none';
+    delayBlock.style.display = 'none';
+    disableBlock.style.display = 'none';
     return;
   }
-  if(Notification.permission === 'granted') {
+  if(Notification.permission === 'granted' && notifEnabled) {
     enableBtn.style.display = 'none';
     statusEl.textContent = '✅ Notifications activées';
     delayBlock.style.display = 'block';
+    disableBlock.style.display = 'block';
     highlightNotifDelay();
+  } else if(Notification.permission === 'granted' && !notifEnabled) {
+    enableBtn.style.display = 'block';
+    enableBtn.textContent = 'Réactiver les notifications';
+    statusEl.textContent = '🔕 Notifications désactivées';
+    delayBlock.style.display = 'none';
+    disableBlock.style.display = 'none';
   } else if(Notification.permission === 'denied') {
     enableBtn.style.display = 'none';
     statusEl.textContent = "Notifications bloquées. Autorisez-les dans les paramètres du site (icône ⓘ dans la barre d'adresse).";
     delayBlock.style.display = 'none';
+    disableBlock.style.display = 'none';
   } else {
     enableBtn.style.display = 'block';
+    enableBtn.textContent = 'Activer les notifications';
     statusEl.textContent = '';
     delayBlock.style.display = 'none';
+    disableBlock.style.display = 'none';
+  }
+}
+
+async function registerPushToken() {
+  if(!messaging) return;
+  try {
+    const token = await getToken(messaging, { vapidKey: VAPID_KEY });
+    if(token) {
+      currentFcmToken = token;
+      await set(ref(db, 'pushTokens/' + token), { user: currentUser, delay: notifDelay, enabled: true, updatedAt: Date.now() });
+    }
+  } catch(e) {
+    console.log('Erreur récupération token FCM', e);
   }
 }
 
 window.enableNotifications = async function() {
-  if(!('Notification' in window)) return;
-  const perm = await Notification.requestPermission();
-  updateNotifUI();
-  if(perm === 'granted') {
-    new Notification('Agenda famille 👨‍👩‍👧', { body: 'Notifications activées ! Vous recevrez un rappel avant chaque trajet.' });
-    scheduleAllNotifications();
+  if(!messaging) return;
+  if(Notification.permission === 'granted' && !notifEnabled) {
+    notifEnabled = true;
+    localStorage.setItem(NOTIF_ENABLED_KEY, '1');
+    if(currentFcmToken) await set(ref(db, 'pushTokens/' + currentFcmToken + '/enabled'), true);
+    updateNotifUI();
+    return;
   }
+  const perm = await Notification.requestPermission();
+  if(perm === 'granted') {
+    notifEnabled = true;
+    localStorage.setItem(NOTIF_ENABLED_KEY, '1');
+    await registerPushToken();
+  }
+  updateNotifUI();
 }
 
-window.setNotifDelay = function(min) {
+window.disableNotifications = async function() {
+  notifEnabled = false;
+  localStorage.setItem(NOTIF_ENABLED_KEY, '0');
+  if(currentFcmToken) await set(ref(db, 'pushTokens/' + currentFcmToken + '/enabled'), false);
+  updateNotifUI();
+}
+
+window.setNotifDelay = async function(min) {
   notifDelay = min;
   localStorage.setItem(NOTIF_DELAY_KEY, String(min));
   highlightNotifDelay();
-  scheduleAllNotifications();
+  if(currentFcmToken) await set(ref(db, 'pushTokens/' + currentFcmToken + '/delay'), min);
 }
 
 function highlightNotifDelay() {
   [15,30,60,120].forEach(d => {
     document.getElementById('nd-'+d).className = 'seg-btn'+(d===notifDelay?' sel notifdelay':'');
-  });
-}
-
-function evNotifLabel(ev) {
-  if(ev.type==='depose') return 'Dépose Anna';
-  if(ev.type==='recupere') return 'Récupération Anna';
-  return ev.activiteName || 'Activité';
-}
-
-// Planifie des notifications locales (setTimeout) pour tous les événements
-// dans les prochaines 24h. Re-déclenché à chaque chargement de la page ou changement d'événements.
-function scheduleAllNotifications() {
-  scheduledNotifTimers.forEach(t => clearTimeout(t));
-  scheduledNotifTimers = [];
-  if(!('Notification' in window) || Notification.permission !== 'granted') return;
-
-  const now = new Date();
-  const horizon = new Date(now.getTime() + 24*3600*1000);
-
-  Object.values(events).forEach(ev => {
-    if(!ev.date || !ev.time) return;
-    const [y,m,d] = ev.date.split('-').map(Number);
-    const [h,min] = ev.time.split(':').map(Number);
-    const evDate = new Date(y, m-1, d, h, min);
-    const notifTime = new Date(evDate.getTime() - notifDelay*60000);
-    if(notifTime > now && notifTime <= horizon) {
-      const delay = notifTime.getTime() - now.getTime();
-      const timer = setTimeout(() => {
-        try {
-          new Notification('👨‍👩‍👧 ' + evNotifLabel(ev), {
-            body: `Dans ${notifDelay} min — ${ev.time}${ev.lieu?' · '+ev.lieu:''}`,
-            tag: ev.date+ev.time+ev.type
-          });
-        } catch(e) {}
-      }, delay);
-      scheduledNotifTimers.push(timer);
-    }
   });
 }
 
