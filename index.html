@@ -188,6 +188,15 @@
   .history-value { font-size: 16px; font-weight: 700; color: var(--text); }
   .history-row.current .history-value { color: var(--green); }
   .history-row.current .history-label { color: var(--green); }
+  .history-row { cursor: pointer; transition: background .15s; }
+  .history-row:hover { background: var(--surface-1); }
+  .history-row.expanded { background: var(--surface-1); }
+  .history-chevron { font-size: 10px; color: var(--text-3); margin-left: 4px; }
+  .history-detail { background: var(--surface-1); border-radius: 0 0 8px 8px; padding: 4px 4px 8px; margin: -1px 0 4px; }
+  .history-detail .stats-row { padding: 6px 10px; }
+  .history-detail .stats-row + .stats-row { border-top: 1px solid var(--border); }
+  .history-detail .stats-label { font-size: 13px; font-weight: 400; color: var(--text-2); }
+  .history-detail .stats-value { font-size: 14px; }
 
   /* Templates */
   .tpl-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; margin-bottom: 10px; box-shadow: var(--shadow); }
@@ -988,6 +997,8 @@ function renderStats() {
   `;
 }
 
+let expandedHistoryWeek = null; // index (timestamp du lundi) de la semaine actuellement dépliée
+
 function renderHistory() {
   const durations = computeDayDurations();
   const today = new Date();
@@ -1014,7 +1025,7 @@ function renderHistory() {
       if(durations[k] !== undefined) { total += durations[k]; count++; }
       if(k === tk) isCurrent = true;
     });
-    weeks.push({ start, end, total, count, isCurrent });
+    weeks.push({ start, end, total, count, isCurrent, key: start.getTime() });
     cursor.setDate(cursor.getDate()+7);
   }
 
@@ -1025,15 +1036,28 @@ function renderHistory() {
   });
 
   const rows = [...weeks].reverse().map(w => {
-    const startInMonth = w.start.getMonth()===month;
-    const endInMonth = w.end.getMonth()===month;
     const label = `${w.start.getDate()}/${w.start.getMonth()+1} – ${w.end.getDate()}/${w.end.getMonth()+1}`;
-    return `<div class="history-row${w.isCurrent?' current':''}">
-      <div>
-        <div class="history-label">${label}${w.isCurrent?' (en cours)':''}</div>
-        <div class="history-sub">${w.count} jour${w.count>1?'s':''} complet${w.count>1?'s':''}</div>
+    const isExpanded = expandedHistoryWeek === w.key;
+    let detailHtml = '';
+    if(isExpanded) {
+      const dayRows = Array.from({length:7}, (_,i) => {
+        const d = new Date(w.start); d.setDate(w.start.getDate()+i);
+        const k = toKey(d);
+        const val = durations[k];
+        const dlabel = `${DAYS_FR_LONG[i]} ${d.getDate()}`;
+        return `<div class="stats-row"><span class="stats-label">${dlabel}</span><span class="stats-value${val===undefined?' incomplete':''}">${val!==undefined?minToHM(val):'—'}</span></div>`;
+      }).join('');
+      detailHtml = `<div class="history-detail">${dayRows}</div>`;
+    }
+    return `<div>
+      <div class="history-row${w.isCurrent?' current':''}${isExpanded?' expanded':''}" onclick="toggleHistoryWeek(${w.key})">
+        <div>
+          <div class="history-label">${label}${w.isCurrent?' (en cours)':''}</div>
+          <div class="history-sub">${w.count} jour${w.count>1?'s':''} complet${w.count>1?'s':''}</div>
+        </div>
+        <span class="history-value">${w.total>0?minToHM(w.total):'—'} <span class="history-chevron">${isExpanded?'︿':'﹀'}</span></span>
       </div>
-      <span class="history-value">${w.total>0?minToHM(w.total):'—'}</span>
+      ${detailHtml}
     </div>`;
   }).join('');
 
@@ -1277,6 +1301,11 @@ window.confirmQuickApply = async function(tplId) {
   const tpl = templates[tplId];
   await applyTemplateToWeek(tpl, weekOffset);
   closeQuickApply();
+}
+
+window.toggleHistoryWeek = function(weekKey) {
+  expandedHistoryWeek = expandedHistoryWeek === weekKey ? null : weekKey;
+  renderHistory();
 }
 
 window.exportICS = function() {
