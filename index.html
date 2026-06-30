@@ -628,6 +628,25 @@ function updateNotifUI() {
   }
 }
 
+async function ensureFcmToken() {
+  if(currentFcmToken) return currentFcmToken;
+  if(!messaging || Notification.permission !== 'granted') return null;
+  try {
+    if(!swRegistration && 'serviceWorker' in navigator) {
+      swRegistration = await navigator.serviceWorker.register('./firebase-messaging-sw.js');
+    }
+    const token = await getToken(messaging, {
+      vapidKey: VAPID_KEY,
+      serviceWorkerRegistration: swRegistration || undefined
+    });
+    if(token) currentFcmToken = token;
+    return token;
+  } catch(e) {
+    console.log('Erreur récupération token FCM (ensureFcmToken)', e);
+    return null;
+  }
+}
+
 async function registerPushToken() {
   if(!messaging) return;
   try {
@@ -653,7 +672,8 @@ window.enableNotifications = async function() {
   if(Notification.permission === 'granted' && !notifEnabled) {
     notifEnabled = true;
     localStorage.setItem(NOTIF_ENABLED_KEY, '1');
-    if(currentFcmToken) await set(ref(db, 'pushTokens/' + currentFcmToken + '/enabled'), true);
+    const token = await ensureFcmToken();
+    if(token) await set(ref(db, 'pushTokens/' + token + '/enabled'), true);
     updateNotifUI();
     return;
   }
@@ -669,7 +689,8 @@ window.enableNotifications = async function() {
 window.disableNotifications = async function() {
   notifEnabled = false;
   localStorage.setItem(NOTIF_ENABLED_KEY, '0');
-  if(currentFcmToken) await set(ref(db, 'pushTokens/' + currentFcmToken + '/enabled'), false);
+  const token = await ensureFcmToken();
+  if(token) await set(ref(db, 'pushTokens/' + token + '/enabled'), false);
   updateNotifUI();
 }
 
@@ -677,7 +698,12 @@ window.setNotifDelay = async function(min) {
   notifDelay = min;
   localStorage.setItem(NOTIF_DELAY_KEY, String(min));
   highlightNotifDelay();
-  if(currentFcmToken) await set(ref(db, 'pushTokens/' + currentFcmToken + '/delay'), min);
+  const token = await ensureFcmToken();
+  if(token) {
+    await set(ref(db, 'pushTokens/' + token + '/delay'), min);
+  } else {
+    console.log('Impossible de mettre à jour le délai : pas de token FCM disponible');
+  }
 }
 
 function highlightNotifDelay() {
