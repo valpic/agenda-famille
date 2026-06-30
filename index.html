@@ -227,6 +227,7 @@
 
   .tpl-quick-btn { width: 100%; padding: 9px; margin-top: 10px; border: 1px dashed var(--border-strong); border-radius: 8px; background: transparent; color: var(--text-2); font-size: 13px; font-weight: 500; cursor: pointer; }
   .tpl-quick-btn:hover { background: var(--surface-1); border-color: var(--accent); color: var(--accent); }
+  .seg-btn.sel.notifdelay { color: var(--accent); }
 </style>
 </head>
 <body>
@@ -247,6 +248,7 @@
     <div class="header-top">
       <div class="app-title">👨‍👩‍👧 Agenda famille <span class="sync-dot" id="sync-dot"></span></div>
       <div class="header-actions">
+        <button class="icon-btn" onclick="openNotifSettings()">🔔</button>
         <button class="icon-btn" onclick="exportICS()">📤</button>
         <div class="user-toggle">
           <button class="user-btn active-me" id="btn-val" onclick="switchUser('val')">Val</button>
@@ -420,7 +422,30 @@
   </div>
 </div>
 
-<!-- Sheet choix rapide d'un modèle pour la semaine affichée (depuis l'onglet Semaine) -->
+<!-- Sheet réglages notifications -->
+<div class="overlay" id="notif-overlay" onclick="closeNotifSettings(event)">
+  <div class="sheet" onclick="event.stopPropagation()">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">🔔 Notifications</div>
+    <div class="form-body">
+      <div class="form-group" id="notif-permission-block">
+        <p style="font-size:14px;color:var(--text-2);margin-bottom:12px">Recevez un rappel automatique avant chaque dépose, récupération ou activité.</p>
+        <button class="btn-save" id="notif-enable-btn" onclick="enableNotifications()">Activer les notifications</button>
+        <p id="notif-status" style="font-size:13px;color:var(--text-3);margin-top:10px;text-align:center"></p>
+      </div>
+      <div class="form-group" id="notif-delay-block" style="display:none">
+        <label class="form-label">Me rappeler combien de temps avant ?</label>
+        <div class="seg">
+          <button class="seg-btn" id="nd-15" onclick="setNotifDelay(15)">15 min</button>
+          <button class="seg-btn" id="nd-30" onclick="setNotifDelay(30)">30 min</button>
+          <button class="seg-btn" id="nd-60" onclick="setNotifDelay(60)">1h</button>
+          <button class="seg-btn" id="nd-120" onclick="setNotifDelay(120)">2h</button>
+        </div>
+      </div>
+      <button class="btn-cancel" onclick="closeNotifSettings()">Fermer</button>
+    </div>
+  </div>
+</div>
 <div class="overlay" id="quick-apply-overlay" onclick="closeQuickApply(event)">
   <div class="sheet" onclick="event.stopPropagation()">
     <div class="sheet-handle"></div>
@@ -473,6 +498,9 @@ let editingTplData = null; // { name, days: { 0:[ev,...], 1:[...], ... } } 0=lun
 let tplEvDayIndex = null;
 let teType = 'depose', teWho = 'val';
 let applyingTplId = null;
+const NOTIF_DELAY_KEY = 'agenda_famille_notif_delay';
+let notifDelay = parseInt(localStorage.getItem(NOTIF_DELAY_KEY) || '30');
+let scheduledNotifTimers = [];
 
 function toKey(d) {
   const y = d.getFullYear();
@@ -503,8 +531,106 @@ if(sessionStorage.getItem(SESSION_KEY) === '1') {
 
 function startApp() {
   setSyncStatus('syncing');
-  onValue(eventsRef, snap => { events = snap.val() || {}; setSyncStatus('online'); render(); });
+  onValue(eventsRef, snap => { events = snap.val() || {}; setSyncStatus('online'); render(); scheduleAllNotifications(); });
   onValue(templatesRef, snap => { templates = snap.val() || {}; render(); });
+  updateNotifUI();
+}
+
+// ====== NOTIFICATIONS LOCALES ======
+
+window.openNotifSettings = function() {
+  updateNotifUI();
+  document.getElementById('notif-overlay').classList.add('open');
+}
+
+window.closeNotifSettings = function(e) {
+  if(!e || e.target===document.getElementById('notif-overlay'))
+    document.getElementById('notif-overlay').classList.remove('open');
+}
+
+function updateNotifUI() {
+  const statusEl = document.getElementById('notif-status');
+  const enableBtn = document.getElementById('notif-enable-btn');
+  const delayBlock = document.getElementById('notif-delay-block');
+  if(!('Notification' in window)) {
+    statusEl.textContent = "Les notifications ne sont pas supportées sur ce navigateur.";
+    enableBtn.style.display = 'none';
+    return;
+  }
+  if(Notification.permission === 'granted') {
+    enableBtn.style.display = 'none';
+    statusEl.textContent = '✅ Notifications activées';
+    delayBlock.style.display = 'block';
+    highlightNotifDelay();
+  } else if(Notification.permission === 'denied') {
+    enableBtn.style.display = 'none';
+    statusEl.textContent = "Notifications bloquées. Autorisez-les dans les paramètres du site (icône ⓘ dans la barre d'adresse).";
+    delayBlock.style.display = 'none';
+  } else {
+    enableBtn.style.display = 'block';
+    statusEl.textContent = '';
+    delayBlock.style.display = 'none';
+  }
+}
+
+window.enableNotifications = async function() {
+  if(!('Notification' in window)) return;
+  const perm = await Notification.requestPermission();
+  updateNotifUI();
+  if(perm === 'granted') {
+    new Notification('Agenda famille 👨‍👩‍👧', { body: 'Notifications activées ! Vous recevrez un rappel avant chaque trajet.' });
+    scheduleAllNotifications();
+  }
+}
+
+window.setNotifDelay = function(min) {
+  notifDelay = min;
+  localStorage.setItem(NOTIF_DELAY_KEY, String(min));
+  highlightNotifDelay();
+  scheduleAllNotifications();
+}
+
+function highlightNotifDelay() {
+  [15,30,60,120].forEach(d => {
+    document.getElementById('nd-'+d).className = 'seg-btn'+(d===notifDelay?' sel notifdelay':'');
+  });
+}
+
+function evNotifLabel(ev) {
+  if(ev.type==='depose') return 'Dépose Anna';
+  if(ev.type==='recupere') return 'Récupération Anna';
+  return ev.activiteName || 'Activité';
+}
+
+// Planifie des notifications locales (setTimeout) pour tous les événements
+// dans les prochaines 24h. Re-déclenché à chaque chargement de la page ou changement d'événements.
+function scheduleAllNotifications() {
+  scheduledNotifTimers.forEach(t => clearTimeout(t));
+  scheduledNotifTimers = [];
+  if(!('Notification' in window) || Notification.permission !== 'granted') return;
+
+  const now = new Date();
+  const horizon = new Date(now.getTime() + 24*3600*1000);
+
+  Object.values(events).forEach(ev => {
+    if(!ev.date || !ev.time) return;
+    const [y,m,d] = ev.date.split('-').map(Number);
+    const [h,min] = ev.time.split(':').map(Number);
+    const evDate = new Date(y, m-1, d, h, min);
+    const notifTime = new Date(evDate.getTime() - notifDelay*60000);
+    if(notifTime > now && notifTime <= horizon) {
+      const delay = notifTime.getTime() - now.getTime();
+      const timer = setTimeout(() => {
+        try {
+          new Notification('👨‍👩‍👧 ' + evNotifLabel(ev), {
+            body: `Dans ${notifDelay} min — ${ev.time}${ev.lieu?' · '+ev.lieu:''}`,
+            tag: ev.date+ev.time+ev.type
+          });
+        } catch(e) {}
+      }, delay);
+      scheduledNotifTimers.push(timer);
+    }
+  });
 }
 
 window.switchUser = function(u) {
