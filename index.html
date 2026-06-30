@@ -224,6 +224,9 @@
   .apply-week-row:hover { border-color: var(--accent); background: var(--accent-light); }
   .apply-week-label { font-size: 14px; color: var(--text); font-weight: 500; }
   .apply-week-sub { font-size: 12px; color: var(--text-3); }
+
+  .tpl-quick-btn { width: 100%; padding: 9px; margin-top: 10px; border: 1px dashed var(--border-strong); border-radius: 8px; background: transparent; color: var(--text-2); font-size: 13px; font-weight: 500; cursor: pointer; }
+  .tpl-quick-btn:hover { background: var(--surface-1); border-color: var(--accent); color: var(--accent); }
 </style>
 </head>
 <body>
@@ -256,7 +259,7 @@
       <button class="view-btn" id="view-month" onclick="setView('month')">Mois</button>
       <button class="view-btn" id="view-stats" onclick="setView('stats')">Stats</button>
       <button class="view-btn" id="view-history" onclick="setView('history')">Historique</button>
-      <button class="view-btn" id="view-templates" onclick="setView('templates')">Modèles</button>
+      <button class="view-btn" id="view-templates" onclick="setView('templates')">Semaine type</button>
     </div>
     <div id="week-header">
       <div class="nav-row">
@@ -265,6 +268,7 @@
         <button class="nav-arrow" onclick="changeWeek(1)">›</button>
       </div>
       <div class="days-strip" id="days-strip"></div>
+      <button class="tpl-quick-btn" id="tpl-quick-btn" onclick="openQuickApply()" style="display:none">📋 Appliquer une semaine type</button>
     </div>
     <div id="month-header" style="display:none">
       <div class="nav-row">
@@ -404,7 +408,7 @@
   </div>
 </div>
 
-<!-- Sheet application d'un modèle à une semaine -->
+<!-- Sheet application d'un modèle à une semaine (depuis l'onglet Semaine type) -->
 <div class="overlay" id="apply-overlay" onclick="closeApplyModal(event)">
   <div class="sheet" onclick="event.stopPropagation()">
     <div class="sheet-handle"></div>
@@ -412,6 +416,18 @@
     <div class="form-body">
       <div class="apply-week-list" id="apply-week-list"></div>
       <button class="btn-cancel" onclick="closeApplyModal()">Annuler</button>
+    </div>
+  </div>
+</div>
+
+<!-- Sheet choix rapide d'un modèle pour la semaine affichée (depuis l'onglet Semaine) -->
+<div class="overlay" id="quick-apply-overlay" onclick="closeQuickApply(event)">
+  <div class="sheet" onclick="event.stopPropagation()">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">Quelle semaine type appliquer ?</div>
+    <div class="form-body">
+      <div class="apply-week-list" id="quick-apply-list"></div>
+      <button class="btn-cancel" onclick="closeQuickApply()">Annuler</button>
     </div>
   </div>
 </div>
@@ -488,7 +504,7 @@ if(sessionStorage.getItem(SESSION_KEY) === '1') {
 function startApp() {
   setSyncStatus('syncing');
   onValue(eventsRef, snap => { events = snap.val() || {}; setSyncStatus('online'); render(); });
-  onValue(templatesRef, snap => { templates = snap.val() || {}; if(currentView==='templates') render(); });
+  onValue(templatesRef, snap => { templates = snap.val() || {}; render(); });
 }
 
 window.switchUser = function(u) {
@@ -620,6 +636,7 @@ function renderEvents() {
       <button class="del-btn" onclick="deleteEvent('${id}')">✕</button>
     </div>`;
   }).join('');
+  document.getElementById('tpl-quick-btn').style.display = Object.keys(templates).length ? 'block' : 'none';
 }
 
 window.openModal = function() {
@@ -875,10 +892,13 @@ function renderHistory() {
     cursor.setDate(cursor.getDate()+7);
   }
 
-  const monthTotal = weeks.reduce((s,w) => s+w.total, 0);
-  const monthCount = weeks.reduce((s,w) => s+w.count, 0);
+  const monthPrefix = `${year}-${String(month+1).padStart(2,'0')}`;
+  let monthTotal = 0, monthCount = 0;
+  Object.entries(durations).forEach(([k, v]) => {
+    if(k.startsWith(monthPrefix)) { monthTotal += v; monthCount++; }
+  });
 
-  const rows = weeks.map(w => {
+  const rows = [...weeks].reverse().map(w => {
     const startInMonth = w.start.getMonth()===month;
     const endInMonth = w.end.getMonth()===month;
     const label = `${w.start.getDate()}/${w.start.getMonth()+1} – ${w.end.getDate()}/${w.end.getMonth()+1}`;
@@ -1085,6 +1105,12 @@ window.closeApplyModal = function(e) {
 
 window.confirmApply = async function(weekOffsetTarget) {
   const tpl = templates[applyingTplId];
+  await applyTemplateToWeek(tpl, weekOffsetTarget);
+  closeApplyModal();
+  setView('week');
+}
+
+async function applyTemplateToWeek(tpl, weekOffsetTarget) {
   if(!tpl || !tpl.days) return;
   setSyncStatus('syncing');
   const start = getWeekStartDate(weekOffsetTarget);
@@ -1100,8 +1126,31 @@ window.confirmApply = async function(weekOffsetTarget) {
     });
   }
   await Promise.all(promises);
-  closeApplyModal();
-  setView('week');
+}
+
+window.openQuickApply = function() {
+  const list = document.getElementById('quick-apply-list');
+  const tplEntries = Object.entries(templates);
+  if(!tplEntries.length) return;
+  list.innerHTML = tplEntries.map(([id, tpl]) => {
+    const totalEvs = tpl.days ? Object.values(tpl.days).reduce((s,arr)=>s+(arr?arr.length:0),0) : 0;
+    return `<div class="apply-week-row" onclick="confirmQuickApply('${id}')">
+      <div><div class="apply-week-label">${tpl.name||'Sans nom'}</div><div class="apply-week-sub">${totalEvs} événement${totalEvs>1?'s':''}</div></div>
+      <span>›</span>
+    </div>`;
+  }).join('');
+  document.getElementById('quick-apply-overlay').classList.add('open');
+}
+
+window.closeQuickApply = function(e) {
+  if(!e || e.target===document.getElementById('quick-apply-overlay'))
+    document.getElementById('quick-apply-overlay').classList.remove('open');
+}
+
+window.confirmQuickApply = async function(tplId) {
+  const tpl = templates[tplId];
+  await applyTemplateToWeek(tpl, weekOffset);
+  closeQuickApply();
 }
 
 window.exportICS = function() {
