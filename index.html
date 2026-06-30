@@ -219,6 +219,7 @@
       <button class="view-btn active" id="view-week" onclick="setView('week')">Semaine</button>
       <button class="view-btn" id="view-month" onclick="setView('month')">Mois</button>
       <button class="view-btn" id="view-stats" onclick="setView('stats')">Stats</button>
+      <button class="view-btn" id="view-history" onclick="setView('history')">Historique</button>
     </div>
     <div id="week-header">
       <div class="nav-row">
@@ -237,6 +238,13 @@
       <div class="month-grid" id="month-grid"></div>
     </div>
     <div id="stats-header" style="display:none"></div>
+    <div id="history-header" style="display:none">
+      <div class="nav-row">
+        <button class="nav-arrow" onclick="changeHistoryMonth(-1)">‹</button>
+        <span class="nav-label" id="history-month-label"></span>
+        <button class="nav-arrow" onclick="changeHistoryMonth(1)">›</button>
+      </div>
+    </div>
   </div>
   <div class="main" id="main"><div class="loading">Chargement…</div></div>
   <button class="fab" onclick="openModal()" id="fab-btn">+</button>
@@ -328,6 +336,7 @@ let currentUser = 'val';
 let selectedDay = toKey(new Date());
 let weekOffset = 0, monthOffset = 0;
 let currentView = 'week';
+let historyMonthOffset = 0;
 let fType = 'depose', fWho = 'val', fRecur = false;
 
 function toKey(d) {
@@ -373,12 +382,16 @@ window.setView = function(v) {
   document.getElementById('view-week').className = 'view-btn'+(v==='week'?' active':'');
   document.getElementById('view-month').className = 'view-btn'+(v==='month'?' active':'');
   document.getElementById('view-stats').className = 'view-btn'+(v==='stats'?' active':'');
+  document.getElementById('view-history').className = 'view-btn'+(v==='history'?' active':'');
   document.getElementById('week-header').style.display = v==='week'?'':'none';
   document.getElementById('month-header').style.display = v==='month'?'':'none';
   document.getElementById('stats-header').style.display = v==='stats'?'':'none';
-  document.getElementById('fab-btn').style.display = v==='stats'?'none':'flex';
+  document.getElementById('history-header').style.display = v==='history'?'':'none';
+  document.getElementById('fab-btn').style.display = (v==='stats'||v==='history')?'none':'flex';
   render();
 }
+
+window.changeHistoryMonth = function(d) { historyMonthOffset += d; render(); }
 
 window.changeWeek = function(d) {
   weekOffset += d;
@@ -413,6 +426,7 @@ function render() {
   if(currentView==='week') { renderWeek(); renderEvents(); }
   else if(currentView==='month') { renderMonth(); renderEvents(); }
   else if(currentView==='stats') { renderStats(); }
+  else if(currentView==='history') { renderHistory(); }
 }
 
 function renderWeek() {
@@ -704,6 +718,66 @@ function renderStats() {
     <div class="stats-section">
       <div class="stats-title">Détail — semaine en cours</div>
       <div class="stats-card">${weekDetailRows}</div>
+    </div>
+  `;
+}
+
+function renderHistory() {
+  const durations = computeDayDurations();
+  const today = new Date();
+  const base = new Date(today.getFullYear(), today.getMonth() + historyMonthOffset, 1);
+  const year = base.getFullYear(), month = base.getMonth();
+  document.getElementById('history-month-label').textContent = `${MONTHS_FULL[month]} ${year}`;
+
+  // Trouve toutes les semaines (lundi-dimanche) qui touchent ce mois
+  const firstOfMonth = new Date(year, month, 1);
+  const lastOfMonth = new Date(year, month + 1, 0);
+  // Lundi de la semaine du 1er du mois
+  let cursor = new Date(firstOfMonth);
+  const dow = cursor.getDay();
+  cursor.setDate(cursor.getDate() - (dow===0?6:dow-1));
+
+  const tk = todayKey();
+  const weeks = [];
+  while(cursor <= lastOfMonth) {
+    const start = new Date(cursor);
+    const end = new Date(cursor); end.setDate(end.getDate()+6);
+    const dayKeys = Array.from({length:7}, (_,i) => { const d=new Date(start); d.setDate(start.getDate()+i); return toKey(d); });
+    let total = 0, count = 0, isCurrent = false;
+    dayKeys.forEach(k => {
+      if(durations[k] !== undefined) { total += durations[k]; count++; }
+      if(k === tk) isCurrent = true;
+    });
+    weeks.push({ start, end, total, count, isCurrent });
+    cursor.setDate(cursor.getDate()+7);
+  }
+
+  const monthTotal = weeks.reduce((s,w) => s+w.total, 0);
+  const monthCount = weeks.reduce((s,w) => s+w.count, 0);
+
+  const rows = weeks.map(w => {
+    const startInMonth = w.start.getMonth()===month;
+    const endInMonth = w.end.getMonth()===month;
+    const label = `${w.start.getDate()}/${w.start.getMonth()+1} – ${w.end.getDate()}/${w.end.getMonth()+1}`;
+    return `<div class="history-row${w.isCurrent?' current':''}">
+      <div>
+        <div class="history-label">${label}${w.isCurrent?' (en cours)':''}</div>
+        <div class="history-sub">${w.count} jour${w.count>1?'s':''} complet${w.count>1?'s':''}</div>
+      </div>
+      <span class="history-value">${w.total>0?minToHM(w.total):'—'}</span>
+    </div>`;
+  }).join('');
+
+  const main = document.getElementById('main');
+  main.innerHTML = `
+    <div class="stats-total-card">
+      <div class="stats-total-label">Total ${MONTHS_FULL[month]}</div>
+      <div class="stats-total-value">${monthTotal>0?minToHM(monthTotal):'—'}</div>
+      <div class="stats-sub" style="margin-top:4px">${monthCount} jour${monthCount>1?'s':''} complet${monthCount>1?'s':''}</div>
+    </div>
+    <div class="stats-section">
+      <div class="stats-title">Détail par semaine</div>
+      <div class="stats-card history-list">${rows}</div>
     </div>
   `;
 }
