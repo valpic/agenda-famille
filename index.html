@@ -155,7 +155,20 @@
   .btn-cancel { width: 100%; padding: 13px; background: transparent; border: 1px solid var(--border); border-radius: 12px; color: var(--text-2); font-size: 15px; cursor: pointer; margin-top: 10px; }
   #endtime-group { display: none; }
   #activite-name-group { display: none; }
-  #who-group { display: none; }
+
+  /* Stats */
+  .stats-section { margin-bottom: 24px; }
+  .stats-title { font-size: 13px; font-weight: 600; color: var(--text-3); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 10px; }
+  .stats-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; margin-bottom: 10px; box-shadow: var(--shadow); }
+  .stats-row { display: flex; align-items: center; justify-content: space-between; padding: 8px 0; }
+  .stats-row + .stats-row { border-top: 1px solid var(--border); }
+  .stats-label { font-size: 14px; color: var(--text); font-weight: 500; }
+  .stats-sub { font-size: 12px; color: var(--text-3); margin-top: 1px; }
+  .stats-value { font-size: 18px; font-weight: 700; color: var(--accent); }
+  .stats-value.incomplete { color: var(--text-3); font-size: 13px; font-weight: 500; }
+  .stats-total-card { background: var(--accent-light); border: 1px solid var(--accent); border-radius: var(--radius); padding: 18px; text-align: center; margin-bottom: 16px; }
+  .stats-total-label { font-size: 13px; color: var(--accent); font-weight: 500; margin-bottom: 4px; }
+  .stats-total-value { font-size: 28px; font-weight: 700; color: var(--accent); }
 </style>
 </head>
 <body>
@@ -186,6 +199,7 @@
     <div class="view-toggle">
       <button class="view-btn active" id="view-week" onclick="setView('week')">Semaine</button>
       <button class="view-btn" id="view-month" onclick="setView('month')">Mois</button>
+      <button class="view-btn" id="view-stats" onclick="setView('stats')">Stats</button>
     </div>
     <div id="week-header">
       <div class="nav-row">
@@ -203,9 +217,10 @@
       </div>
       <div class="month-grid" id="month-grid"></div>
     </div>
+    <div id="stats-header" style="display:none"></div>
   </div>
   <div class="main" id="main"><div class="loading">Chargement…</div></div>
-  <button class="fab" onclick="openModal()">+</button>
+  <button class="fab" onclick="openModal()" id="fab-btn">+</button>
 </div>
 
 <div class="overlay" id="overlay" onclick="closeModal(event)">
@@ -244,7 +259,7 @@
         <input type="text" class="form-input" id="f-lieu" placeholder="École, piscine…">
       </div>
       <div class="form-group" id="who-group">
-        <label class="form-label">Qui accompagne ?</label>
+        <label class="form-label" id="who-label">Qui s'en charge ?</label>
         <div class="seg">
           <button class="seg-btn sel val" id="w-val" onclick="selWho('val')">👤 Val</button>
           <button class="seg-btn alex" id="w-alex" onclick="selWho('alex')">👤 Alex</button>
@@ -333,8 +348,11 @@ window.setView = function(v) {
   currentView = v;
   document.getElementById('view-week').className = 'view-btn'+(v==='week'?' active':'');
   document.getElementById('view-month').className = 'view-btn'+(v==='month'?' active':'');
+  document.getElementById('view-stats').className = 'view-btn'+(v==='stats'?' active':'');
   document.getElementById('week-header').style.display = v==='week'?'':'none';
   document.getElementById('month-header').style.display = v==='month'?'':'none';
+  document.getElementById('stats-header').style.display = v==='stats'?'':'none';
+  document.getElementById('fab-btn').style.display = v==='stats'?'none':'flex';
   render();
 }
 
@@ -368,8 +386,9 @@ function getMonthDates(offset) {
 }
 
 function render() {
-  if(currentView==='week') renderWeek(); else renderMonth();
-  renderEvents();
+  if(currentView==='week') { renderWeek(); renderEvents(); }
+  else if(currentView==='month') { renderMonth(); renderEvents(); }
+  else if(currentView==='stats') { renderStats(); }
 }
 
 function renderWeek() {
@@ -444,7 +463,6 @@ function renderEvents() {
 
 window.openModal = function() {
   document.getElementById('f-date').value = selectedDay;
-  document.getElementById('f-time').value = '08:30';
   document.getElementById('f-endtime').value = '09:00';
   document.getElementById('f-lieu').value = '';
   document.getElementById('f-activite-name').value = '';
@@ -466,8 +484,12 @@ window.selType = function(t) {
   });
   document.getElementById('endtime-group').style.display = t==='activite'?'block':'none';
   document.getElementById('activite-name-group').style.display = t==='activite'?'block':'none';
-  document.getElementById('who-group').style.display = t==='activite'?'block':'none';
+  document.getElementById('who-label').textContent = t==='activite'?"Qui accompagne ?":"Qui s'en charge ?";
   document.getElementById('sheet-title').textContent = t==='activite'?'Nouvelle activité':'Nouveau trajet';
+  const timeInput = document.getElementById('f-time');
+  if(t==='depose') timeInput.value = '08:30';
+  else if(t==='recupere') timeInput.value = '18:30';
+  else if(t==='activite') timeInput.value = '18:30';
 }
 
 window.selWho = function(w) {
@@ -487,11 +509,10 @@ window.saveEvent = async function() {
   const lieu = document.getElementById('f-lieu').value.trim();
   if(!date||!time) return;
   setSyncStatus('syncing');
-  const base = { type:fType, time, lieu, recur:fRecur, date };
+  const base = { type:fType, time, lieu, recur:fRecur, date, who:fWho };
   if(fType==='activite') {
     base.activiteName = document.getElementById('f-activite-name').value.trim() || 'Activité';
     base.endTime = document.getElementById('f-endtime').value;
-    base.who = fWho;
   }
   if(fRecur) {
     for(let w=0;w<12;w++) {
@@ -512,6 +533,101 @@ window.deleteEvent = async function(id) {
   if(!confirm('Supprimer cet événement ?')) return;
   setSyncStatus('syncing');
   await remove(ref(db,'events/'+id));
+}
+
+function timeToMin(t) { const [h,m] = t.split(':').map(Number); return h*60+m; }
+function minToHM(min) {
+  const h = Math.floor(min/60), m = min%60;
+  return m===0 ? `${h}h` : `${h}h${String(m).padStart(2,'0')}`;
+}
+
+// Calcule pour chaque date, l'écart dépose->récupération si les deux existent ce jour-là
+function computeDayDurations() {
+  const byDate = {};
+  Object.values(events).forEach(e => {
+    if(e.type==='depose' || e.type==='recupere') {
+      if(!byDate[e.date]) byDate[e.date] = {};
+      byDate[e.date][e.type] = e.time;
+    }
+  });
+  const result = {};
+  Object.entries(byDate).forEach(([date, d]) => {
+    if(d.depose && d.recupere) {
+      const diff = timeToMin(d.recupere) - timeToMin(d.depose);
+      if(diff > 0) result[date] = diff;
+    }
+  });
+  return result;
+}
+
+function renderStats() {
+  const durations = computeDayDurations();
+  const tk = todayKey();
+  const todayMin = durations[tk];
+
+  // Semaine en cours
+  const weekDays = getWeekDates(0).map(d => toKey(d));
+  let weekTotal = 0, weekCount = 0;
+  weekDays.forEach(k => { if(durations[k] !== undefined) { weekTotal += durations[k]; weekCount++; } });
+
+  // Mois en cours
+  const today = new Date();
+  const monthPrefix = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}`;
+  let monthTotal = 0, monthCount = 0;
+  Object.entries(durations).forEach(([k, v]) => {
+    if(k.startsWith(monthPrefix)) { monthTotal += v; monthCount++; }
+  });
+
+  // Détail par jour de la semaine en cours
+  const DAYS_FR_FULL = ['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'];
+  const weekDetailRows = getWeekDates(0).map(d => {
+    const k = toKey(d);
+    const val = durations[k];
+    const label = `${DAYS_FR_FULL[d.getDay()]} ${d.getDate()}`;
+    if(val !== undefined) {
+      return `<div class="stats-row"><span class="stats-label">${label}</span><span class="stats-value">${minToHM(val)}</span></div>`;
+    }
+    return `<div class="stats-row"><span class="stats-label">${label}</span><span class="stats-value incomplete">—</span></div>`;
+  }).join('');
+
+  const main = document.getElementById('main');
+  main.innerHTML = `
+    <div class="stats-total-card">
+      <div class="stats-total-label">Aujourd'hui</div>
+      <div class="stats-total-value">${todayMin !== undefined ? minToHM(todayMin) : '—'}</div>
+    </div>
+
+    <div class="stats-section">
+      <div class="stats-title">Cette semaine (cumulé)</div>
+      <div class="stats-card">
+        <div class="stats-row">
+          <div>
+            <div class="stats-label">Total</div>
+            <div class="stats-sub">${weekCount} jour${weekCount>1?'s':''} avec dépose + récupération</div>
+          </div>
+          <span class="stats-value">${weekTotal>0 ? minToHM(weekTotal) : '—'}</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="stats-section">
+      <div class="stats-title">Ce mois-ci (cumulé)</div>
+      <div class="stats-card">
+        <div class="stats-row">
+          <div>
+            <div class="stats-label">Total</div>
+            <div class="stats-sub">${monthCount} jour${monthCount>1?'s':''} avec dépose + récupération</div>
+          </div>
+          <span class="stats-value">${monthTotal>0 ? minToHM(monthTotal) : '—'}</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="stats-section">
+      <div class="stats-title">Détail — semaine en cours</div>
+      <div class="stats-card">${weekDetailRows}</div>
+    </div>
+  `;
 }
 
 window.exportICS = function() {
