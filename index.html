@@ -287,6 +287,7 @@
       <div class="header-actions">
         <button class="icon-btn" onclick="openNotifSettings()">🔔</button>
         <button class="icon-btn" onclick="exportICS()">📤</button>
+        <button class="icon-btn" onclick="logout()" title="Changer de profil">🚪</button>
         <div class="user-toggle">
           <button class="user-btn active-me" id="btn-val" onclick="switchUser('val')">Val</button>
           <button class="user-btn" id="btn-alex" onclick="switchUser('alex')">Alex</button>
@@ -567,6 +568,12 @@ function toKey(d) {
 function todayKey() { return toKey(new Date()); }
 function setSyncStatus(s) { document.getElementById('sync-dot').className = 'sync-dot ' + s; }
 
+window.logout = function() {
+  if(!confirm('Se déconnecter et changer de profil ?')) return;
+  localStorage.removeItem(SESSION_KEY);
+  location.reload();
+}
+
 window.selectProfile = function(key) {
   selectedProfileKey = key;
   document.getElementById('profile-grid').style.display = 'none';
@@ -588,7 +595,7 @@ window.backToProfiles = function() {
 window.unlock = function() {
   const profile = PROFILES[selectedProfileKey];
   if(document.getElementById('lock-input').value === profile.password) {
-    sessionStorage.setItem(SESSION_KEY, JSON.stringify({ profile: selectedProfileKey, role: profile.role }));
+    localStorage.setItem(SESSION_KEY, JSON.stringify({ profile: selectedProfileKey, role: profile.role }));
     currentRole = profile.role;
     document.getElementById('lock-screen').style.display = 'none';
     document.getElementById('app-content').style.display = 'block';
@@ -599,7 +606,7 @@ window.unlock = function() {
   }
 }
 
-const savedSession = sessionStorage.getItem(SESSION_KEY);
+const savedSession = localStorage.getItem(SESSION_KEY);
 if(savedSession) {
   try {
     const parsed = JSON.parse(savedSession);
