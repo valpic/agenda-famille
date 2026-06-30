@@ -188,6 +188,42 @@
   .history-value { font-size: 16px; font-weight: 700; color: var(--text); }
   .history-row.current .history-value { color: var(--green); }
   .history-row.current .history-label { color: var(--green); }
+
+  /* Templates */
+  .tpl-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; margin-bottom: 10px; box-shadow: var(--shadow); }
+  .tpl-card-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
+  .tpl-name { font-size: 16px; font-weight: 600; color: var(--text); }
+  .tpl-count { font-size: 12px; color: var(--text-3); margin-bottom: 10px; }
+  .tpl-actions { display: flex; gap: 8px; }
+  .tpl-btn { flex: 1; padding: 9px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface-1); font-size: 13px; font-weight: 500; color: var(--text-2); cursor: pointer; text-align: center; }
+  .tpl-btn.primary { background: var(--accent-light); border-color: var(--accent); color: var(--accent); }
+  .tpl-btn.danger:hover { background: var(--danger-light); color: var(--danger); border-color: var(--danger); }
+  .tpl-add-btn { width: 100%; padding: 14px; border: 1px dashed var(--border-strong); border-radius: var(--radius); background: transparent; color: var(--text-2); font-size: 14px; font-weight: 500; cursor: pointer; margin-top: 4px; }
+  .tpl-add-btn:hover { background: var(--surface-1); border-color: var(--accent); color: var(--accent); }
+
+  /* Template editor sheet */
+  .tpl-day-section { margin-bottom: 16px; }
+  .tpl-day-title { font-size: 13px; font-weight: 600; color: var(--text-2); margin-bottom: 8px; text-transform: uppercase; letter-spacing: .4px; }
+  .tpl-ev-row { display: flex; align-items: center; gap: 8px; background: var(--surface-1); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; margin-bottom: 6px; }
+  .tpl-ev-icon { width: 28px; height: 28px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 14px; flex-shrink: 0; }
+  .tpl-ev-icon.depose { background: var(--green-light); }
+  .tpl-ev-icon.recupere { background: var(--purple-light); }
+  .tpl-ev-icon.activite { background: var(--amber-light); }
+  .tpl-ev-info { flex: 1; min-width: 0; }
+  .tpl-ev-title { font-size: 13px; font-weight: 500; color: var(--text); }
+  .tpl-ev-sub { font-size: 11px; color: var(--text-3); }
+  .tpl-ev-del { background: none; border: none; color: var(--text-3); cursor: pointer; font-size: 16px; padding: 4px; }
+  .tpl-ev-del:hover { color: var(--danger); }
+  .tpl-add-ev-btn { width: 100%; padding: 8px; border: 1px dashed var(--border-strong); border-radius: 8px; background: transparent; color: var(--text-3); font-size: 12px; cursor: pointer; }
+  .tpl-add-ev-btn:hover { color: var(--accent); border-color: var(--accent); }
+  .tpl-name-input { width: 100%; padding: 11px 14px; border: 1px solid var(--border-strong); border-radius: 10px; font-size: 16px; font-weight: 600; background: var(--surface); color: var(--text); outline: none; margin-bottom: 16px; -webkit-appearance: none; }
+
+  /* Apply template modal */
+  .apply-week-list { max-height: 280px; overflow-y: auto; }
+  .apply-week-row { display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; border: 1px solid var(--border); border-radius: 10px; margin-bottom: 8px; cursor: pointer; }
+  .apply-week-row:hover { border-color: var(--accent); background: var(--accent-light); }
+  .apply-week-label { font-size: 14px; color: var(--text); font-weight: 500; }
+  .apply-week-sub { font-size: 12px; color: var(--text-3); }
 </style>
 </head>
 <body>
@@ -220,6 +256,7 @@
       <button class="view-btn" id="view-month" onclick="setView('month')">Mois</button>
       <button class="view-btn" id="view-stats" onclick="setView('stats')">Stats</button>
       <button class="view-btn" id="view-history" onclick="setView('history')">Historique</button>
+      <button class="view-btn" id="view-templates" onclick="setView('templates')">Modèles</button>
     </div>
     <div id="week-header">
       <div class="nav-row">
@@ -245,6 +282,7 @@
         <button class="nav-arrow" onclick="changeHistoryMonth(1)">›</button>
       </div>
     </div>
+    <div id="templates-header" style="display:none"></div>
   </div>
   <div class="main" id="main"><div class="loading">Chargement…</div></div>
   <button class="fab" onclick="openModal()" id="fab-btn">+</button>
@@ -307,9 +345,80 @@
   </div>
 </div>
 
+<!-- Sheet édition modèle de semaine -->
+<div class="overlay" id="tpl-overlay" onclick="closeTplModal(event)">
+  <div class="sheet" onclick="event.stopPropagation()">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title" id="tpl-sheet-title">Modèle de semaine</div>
+    <div class="form-body">
+      <input type="text" class="tpl-name-input" id="tpl-name-input" placeholder="Nom du modèle (ex: Semaine normale)">
+      <div id="tpl-days-container"></div>
+      <button class="btn-save" onclick="saveTpl()">Enregistrer le modèle</button>
+      <button class="btn-cancel" onclick="closeTplModal()">Annuler</button>
+    </div>
+  </div>
+</div>
+
+<!-- Sheet ajout d'un événement au modèle -->
+<div class="overlay" id="tpl-ev-overlay" onclick="closeTplEvModal(event)">
+  <div class="sheet" onclick="event.stopPropagation()">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title" id="tpl-ev-sheet-title">Ajouter un événement</div>
+    <div class="form-body">
+      <div class="form-group">
+        <label class="form-label">Type</label>
+        <div class="seg">
+          <button class="seg-btn sel depose" id="te-depose" onclick="selTplEvType('depose')">🚗 Dépose</button>
+          <button class="seg-btn recupere" id="te-recupere" onclick="selTplEvType('recupere')">🏫 Récup.</button>
+          <button class="seg-btn activite" id="te-activite" onclick="selTplEvType('activite')">⭐ Activité</button>
+        </div>
+      </div>
+      <div class="form-group" id="te-activite-name-group" style="display:none">
+        <label class="form-label">Nom de l'activité</label>
+        <input type="text" class="form-input" id="te-activite-name" placeholder="Natation, foot, piano…">
+      </div>
+      <div class="time-row">
+        <div class="form-group">
+          <label class="form-label">Heure de début</label>
+          <input type="time" class="form-input" id="te-time">
+        </div>
+        <div class="form-group" id="te-endtime-group" style="display:none">
+          <label class="form-label">Heure de fin</label>
+          <input type="time" class="form-input" id="te-endtime">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Lieu</label>
+        <input type="text" class="form-input" id="te-lieu" placeholder="École, piscine…">
+      </div>
+      <div class="form-group">
+        <label class="form-label" id="te-who-label">Qui s'en charge ?</label>
+        <div class="seg">
+          <button class="seg-btn sel val" id="te-w-val" onclick="selTplEvWho('val')">👤 Val</button>
+          <button class="seg-btn alex" id="te-w-alex" onclick="selTplEvWho('alex')">👤 Alex</button>
+        </div>
+      </div>
+      <button class="btn-save" onclick="confirmTplEv()">Ajouter au modèle</button>
+      <button class="btn-cancel" onclick="closeTplEvModal()">Annuler</button>
+    </div>
+  </div>
+</div>
+
+<!-- Sheet application d'un modèle à une semaine -->
+<div class="overlay" id="apply-overlay" onclick="closeApplyModal(event)">
+  <div class="sheet" onclick="event.stopPropagation()">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">Appliquer à quelle semaine ?</div>
+    <div class="form-body">
+      <div class="apply-week-list" id="apply-week-list"></div>
+      <button class="btn-cancel" onclick="closeApplyModal()">Annuler</button>
+    </div>
+  </div>
+</div>
+
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getDatabase, ref, onValue, push, remove } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+import { getDatabase, ref, onValue, push, remove, set } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
 const CODE = "Anna2026!";
 const SESSION_KEY = "agenda_famille_auth";
@@ -326,18 +435,28 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 const eventsRef = ref(db, 'events');
+const templatesRef = ref(db, 'templates');
 
 const DAYS_FR = ['Dim','Lun','Mar','Mer','Jeu','Ven','Sam'];
 const MONTHS_FR = ['jan','fév','mar','avr','mai','jun','jul','aoû','sep','oct','nov','déc'];
 const MONTHS_FULL = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
+const DAYS_FR_LONG = ['Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi','Dimanche'];
 
 let events = {};
+let templates = {};
 let currentUser = 'val';
 let selectedDay = toKey(new Date());
 let weekOffset = 0, monthOffset = 0;
 let currentView = 'week';
 let historyMonthOffset = 0;
 let fType = 'depose', fWho = 'val', fRecur = false;
+
+// État éditeur de modèle
+let editingTplId = null;
+let editingTplData = null; // { name, days: { 0:[ev,...], 1:[...], ... } } 0=lundi..6=dimanche
+let tplEvDayIndex = null;
+let teType = 'depose', teWho = 'val';
+let applyingTplId = null;
 
 function toKey(d) {
   const y = d.getFullYear();
@@ -369,6 +488,7 @@ if(sessionStorage.getItem(SESSION_KEY) === '1') {
 function startApp() {
   setSyncStatus('syncing');
   onValue(eventsRef, snap => { events = snap.val() || {}; setSyncStatus('online'); render(); });
+  onValue(templatesRef, snap => { templates = snap.val() || {}; if(currentView==='templates') render(); });
 }
 
 window.switchUser = function(u) {
@@ -383,11 +503,13 @@ window.setView = function(v) {
   document.getElementById('view-month').className = 'view-btn'+(v==='month'?' active':'');
   document.getElementById('view-stats').className = 'view-btn'+(v==='stats'?' active':'');
   document.getElementById('view-history').className = 'view-btn'+(v==='history'?' active':'');
+  document.getElementById('view-templates').className = 'view-btn'+(v==='templates'?' active':'');
   document.getElementById('week-header').style.display = v==='week'?'':'none';
   document.getElementById('month-header').style.display = v==='month'?'':'none';
   document.getElementById('stats-header').style.display = v==='stats'?'':'none';
   document.getElementById('history-header').style.display = v==='history'?'':'none';
-  document.getElementById('fab-btn').style.display = (v==='stats'||v==='history')?'none':'flex';
+  document.getElementById('templates-header').style.display = v==='templates'?'':'none';
+  document.getElementById('fab-btn').style.display = (v==='stats'||v==='history'||v==='templates')?'none':'flex';
   render();
 }
 
@@ -427,6 +549,7 @@ function render() {
   else if(currentView==='month') { renderMonth(); renderEvents(); }
   else if(currentView==='stats') { renderStats(); }
   else if(currentView==='history') { renderHistory(); }
+  else if(currentView==='templates') { renderTemplates(); }
 }
 
 function renderWeek() {
@@ -780,6 +903,205 @@ function renderHistory() {
       <div class="stats-card history-list">${rows}</div>
     </div>
   `;
+}
+
+// ====== MODÈLES DE SEMAINE ======
+
+function evIconTpl(type) { return type==='depose'?'🚗':type==='recupere'?'🏫':'⭐'; }
+function evLabelTpl(ev) {
+  if(ev.type==='depose') return 'Dépose Anna';
+  if(ev.type==='recupere') return 'Récupération Anna';
+  return ev.activiteName || 'Activité';
+}
+
+function renderTemplates() {
+  const main = document.getElementById('main');
+  const list = Object.entries(templates);
+  if(!list.length) {
+    main.innerHTML = `<div class="day-title">Modèles de semaine</div>
+      <div class="empty"><div class="empty-emoji">📋</div><p>Aucun modèle pour l'instant</p></div>
+      <button class="tpl-add-btn" onclick="newTemplate()">+ Créer un modèle de semaine</button>`;
+    return;
+  }
+  const cards = list.map(([id, tpl]) => {
+    const totalEvs = tpl.days ? Object.values(tpl.days).reduce((s,arr)=>s+(arr?arr.length:0),0) : 0;
+    return `<div class="tpl-card">
+      <div class="tpl-card-top"><span class="tpl-name">${tpl.name||'Sans nom'}</span></div>
+      <div class="tpl-count">${totalEvs} événement${totalEvs>1?'s':''} configuré${totalEvs>1?'s':''}</div>
+      <div class="tpl-actions">
+        <button class="tpl-btn primary" onclick="openApplyModal('${id}')">▶ Appliquer</button>
+        <button class="tpl-btn" onclick="editTemplate('${id}')">✏️ Modifier</button>
+        <button class="tpl-btn danger" onclick="deleteTemplate('${id}')">🗑️</button>
+      </div>
+    </div>`;
+  }).join('');
+  main.innerHTML = `<div class="day-title">Modèles de semaine</div>${cards}
+    <button class="tpl-add-btn" onclick="newTemplate()">+ Créer un modèle de semaine</button>`;
+}
+
+window.newTemplate = function() {
+  editingTplId = null;
+  editingTplData = { name: '', days: {0:[],1:[],2:[],3:[],4:[],5:[],6:[]} };
+  document.getElementById('tpl-sheet-title').textContent = 'Nouveau modèle';
+  document.getElementById('tpl-name-input').value = '';
+  renderTplDaysEditor();
+  document.getElementById('tpl-overlay').classList.add('open');
+}
+
+window.editTemplate = function(id) {
+  editingTplId = id;
+  const t = templates[id];
+  editingTplData = { name: t.name || '', days: {} };
+  for(let i=0;i<7;i++) editingTplData.days[i] = (t.days && t.days[i]) ? [...t.days[i]] : [];
+  document.getElementById('tpl-sheet-title').textContent = 'Modifier le modèle';
+  document.getElementById('tpl-name-input').value = editingTplData.name;
+  renderTplDaysEditor();
+  document.getElementById('tpl-overlay').classList.add('open');
+}
+
+window.closeTplModal = function(e) {
+  if(!e || e.target===document.getElementById('tpl-overlay'))
+    document.getElementById('tpl-overlay').classList.remove('open');
+}
+
+function renderTplDaysEditor() {
+  const container = document.getElementById('tpl-days-container');
+  let html = '';
+  for(let i=0;i<7;i++) {
+    const evs = editingTplData.days[i] || [];
+    const rows = evs.map((ev, idx) => `
+      <div class="tpl-ev-row">
+        <div class="tpl-ev-icon ${ev.type}">${evIconTpl(ev.type)}</div>
+        <div class="tpl-ev-info">
+          <div class="tpl-ev-title">${evLabelTpl(ev)}</div>
+          <div class="tpl-ev-sub">${ev.time}${ev.endTime?' → '+ev.endTime:''}${ev.lieu?' · '+ev.lieu:''}${ev.who?' · '+(ev.who==='val'?'Val':'Alex'):''}</div>
+        </div>
+        <button class="tpl-ev-del" onclick="removeTplEv(${i},${idx})">✕</button>
+      </div>`).join('');
+    html += `<div class="tpl-day-section">
+      <div class="tpl-day-title">${DAYS_FR_LONG[i]}</div>
+      ${rows}
+      <button class="tpl-add-ev-btn" onclick="openTplEvModal(${i})">+ Ajouter un événement</button>
+    </div>`;
+  }
+  container.innerHTML = html;
+}
+
+window.removeTplEv = function(dayIdx, evIdx) {
+  editingTplData.days[dayIdx].splice(evIdx, 1);
+  renderTplDaysEditor();
+}
+
+window.openTplEvModal = function(dayIdx) {
+  tplEvDayIndex = dayIdx;
+  document.getElementById('tpl-ev-sheet-title').textContent = `Ajouter — ${DAYS_FR_LONG[dayIdx]}`;
+  document.getElementById('te-activite-name').value = '';
+  document.getElementById('te-lieu').value = '';
+  teType = 'depose'; teWho = 'val';
+  selTplEvType('depose');
+  selTplEvWho('val');
+  document.getElementById('tpl-ev-overlay').classList.add('open');
+}
+
+window.closeTplEvModal = function(e) {
+  if(!e || e.target===document.getElementById('tpl-ev-overlay'))
+    document.getElementById('tpl-ev-overlay').classList.remove('open');
+}
+
+window.selTplEvType = function(t) {
+  teType = t;
+  ['depose','recupere','activite'].forEach(x => {
+    document.getElementById('te-'+x).className = 'seg-btn'+(x===t?' sel '+x:' '+x);
+  });
+  document.getElementById('te-endtime-group').style.display = t==='activite'?'block':'none';
+  document.getElementById('te-activite-name-group').style.display = t==='activite'?'block':'none';
+  document.getElementById('te-who-label').textContent = t==='activite'?"Qui accompagne ?":"Qui s'en charge ?";
+  const timeInput = document.getElementById('te-time');
+  if(t==='depose') timeInput.value = '08:30';
+  else if(t==='recupere') timeInput.value = '18:30';
+  else if(t==='activite') { timeInput.value = '18:30'; document.getElementById('te-endtime').value = '19:00'; }
+}
+
+window.selTplEvWho = function(w) {
+  teWho = w;
+  document.getElementById('te-w-val').className = 'seg-btn'+(w==='val'?' sel val':' val');
+  document.getElementById('te-w-alex').className = 'seg-btn'+(w==='alex'?' sel alex':' alex');
+}
+
+window.confirmTplEv = function() {
+  const time = document.getElementById('te-time').value;
+  if(!time) return;
+  const lieu = document.getElementById('te-lieu').value.trim();
+  const ev = { type: teType, time, lieu, who: teWho };
+  if(teType==='activite') {
+    ev.activiteName = document.getElementById('te-activite-name').value.trim() || 'Activité';
+    ev.endTime = document.getElementById('te-endtime').value;
+  }
+  editingTplData.days[tplEvDayIndex].push(ev);
+  closeTplEvModal();
+  renderTplDaysEditor();
+}
+
+window.saveTpl = async function() {
+  const name = document.getElementById('tpl-name-input').value.trim();
+  if(!name) { alert('Merci de donner un nom au modèle.'); return; }
+  editingTplData.name = name;
+  setSyncStatus('syncing');
+  if(editingTplId) {
+    await set(ref(db, 'templates/'+editingTplId), editingTplData);
+  } else {
+    await push(templatesRef, editingTplData);
+  }
+  closeTplModal();
+}
+
+window.deleteTemplate = async function(id) {
+  if(!confirm('Supprimer ce modèle de semaine ?')) return;
+  setSyncStatus('syncing');
+  await remove(ref(db, 'templates/'+id));
+}
+
+window.openApplyModal = function(tplId) {
+  applyingTplId = tplId;
+  const list = document.getElementById('apply-week-list');
+  let html = '';
+  for(let w=0; w<=8; w++) {
+    const start = getWeekStartDate(w);
+    const end = new Date(start); end.setDate(end.getDate()+6);
+    const label = w===0?'Cette semaine':w===1?'Semaine prochaine':`${start.getDate()}/${start.getMonth()+1} – ${end.getDate()}/${end.getMonth()+1}`;
+    html += `<div class="apply-week-row" onclick="confirmApply(${w})">
+      <div><div class="apply-week-label">${label}</div><div class="apply-week-sub">${start.getDate()}/${start.getMonth()+1} – ${end.getDate()}/${end.getMonth()+1}</div></div>
+      <span>›</span>
+    </div>`;
+  }
+  list.innerHTML = html;
+  document.getElementById('apply-overlay').classList.add('open');
+}
+
+window.closeApplyModal = function(e) {
+  if(!e || e.target===document.getElementById('apply-overlay'))
+    document.getElementById('apply-overlay').classList.remove('open');
+}
+
+window.confirmApply = async function(weekOffsetTarget) {
+  const tpl = templates[applyingTplId];
+  if(!tpl || !tpl.days) return;
+  setSyncStatus('syncing');
+  const start = getWeekStartDate(weekOffsetTarget);
+  const promises = [];
+  for(let i=0;i<7;i++) {
+    const dayEvs = tpl.days[i] || [];
+    if(!dayEvs.length) continue;
+    const d = new Date(start); d.setDate(start.getDate()+i);
+    const dateKey = toKey(d);
+    dayEvs.forEach(ev => {
+      const newEv = { ...ev, date: dateKey, recur: false };
+      promises.push(push(eventsRef, newEv));
+    });
+  }
+  await Promise.all(promises);
+  closeApplyModal();
+  setView('week');
 }
 
 window.exportICS = function() {
