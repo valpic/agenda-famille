@@ -345,7 +345,7 @@
           <button class="seg-btn alex" id="w-alex" onclick="selWho('alex')">👤 Alex</button>
         </div>
       </div>
-      <div class="form-group">
+      <div class="form-group" id="recur-group">
         <div class="recur-row">
           <div>
             <div class="recur-label">Répéter chaque semaine</div>
@@ -354,7 +354,8 @@
           <button class="toggle" id="recur-btn" onclick="toggleRecur()"></button>
         </div>
       </div>
-      <button class="btn-save" onclick="saveEvent()">Enregistrer</button>
+      <button class="btn-save" id="btn-save" onclick="saveEvent()">Enregistrer</button>
+      <button class="btn-cancel" id="modal-delete-btn" style="display:none;color:var(--danger);border-color:var(--danger-light)" onclick="deleteEventFromModal()">🗑️ Supprimer cet événement</button>
       <button class="btn-cancel" onclick="closeModal()">Annuler</button>
     </div>
   </div>
@@ -508,6 +509,7 @@ let weekOffset = 0, monthOffset = 0;
 let currentView = 'week';
 let historyMonthOffset = 0;
 let fType = 'depose', fWho = 'val', fRecur = false;
+let editingEventId = null;
 
 // État éditeur de modèle
 let editingTplId = null;
@@ -566,12 +568,13 @@ function startApp() {
   }
 }
 
+let swRegistration = null;
+
 function registerServiceWorker() {
   if('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/agenda-famille/firebase-messaging-sw.js').catch(() => {
-      // Fallback si l'app n'est pas servie depuis un sous-dossier /agenda-famille/
-      navigator.serviceWorker.register('./firebase-messaging-sw.js').catch(e => console.log('SW registration failed', e));
-    });
+    navigator.serviceWorker.register('./firebase-messaging-sw.js')
+      .then(reg => { swRegistration = reg; console.log('Service worker enregistré', reg.scope); })
+      .catch(e => console.log('SW registration failed', e));
   }
 }
 
@@ -628,13 +631,20 @@ function updateNotifUI() {
 async function registerPushToken() {
   if(!messaging) return;
   try {
-    const token = await getToken(messaging, { vapidKey: VAPID_KEY });
+    if(!swRegistration && 'serviceWorker' in navigator) {
+      swRegistration = await navigator.serviceWorker.register('./firebase-messaging-sw.js');
+    }
+    const token = await getToken(messaging, {
+      vapidKey: VAPID_KEY,
+      serviceWorkerRegistration: swRegistration || undefined
+    });
     if(token) {
       currentFcmToken = token;
       await set(ref(db, 'pushTokens/' + token), { user: currentUser, delay: notifDelay, enabled: true, updatedAt: Date.now() });
     }
   } catch(e) {
     console.log('Erreur récupération token FCM', e);
+    alert('Erreur notifications: ' + e.message);
   }
 }
 
@@ -794,7 +804,7 @@ function renderEvents() {
   }
   main.innerHTML = `<div class="day-title">${title}</div>` + dayEvs.map(([id,ev]) => {
     const whoTag = ev.who ? `<span class="tag tag-${ev.who}">${ev.who==='val'?'Val':'Alex'}</span>` : '';
-    return `<div class="event-card">
+    return `<div class="event-card" onclick="openModal('${id}')" style="cursor:pointer">
       <div class="ev-icon ${ev.type}">${evIcon(ev.type)}</div>
       <div class="ev-body">
         <div class="ev-type">${evLabel(ev)}</div>
@@ -802,20 +812,40 @@ function renderEvents() {
         ${ev.lieu?`<div class="ev-lieu">📍 ${ev.lieu}</div>`:''}
         <div class="ev-tags">${whoTag}${ev.recur?'<span class="tag tag-recur">🔁 hebdo</span>':''}</div>
       </div>
-      <button class="del-btn" onclick="deleteEvent('${id}')">✕</button>
+      <button class="del-btn" onclick="event.stopPropagation(); deleteEvent('${id}')">✕</button>
     </div>`;
   }).join('');
   document.getElementById('tpl-quick-btn').style.display = Object.keys(templates).length ? 'block' : 'none';
 }
 
-window.openModal = function() {
-  document.getElementById('f-date').value = selectedDay;
-  document.getElementById('f-endtime').value = '09:00';
-  document.getElementById('f-lieu').value = '';
-  document.getElementById('f-activite-name').value = '';
-  fType='depose'; fWho='val'; fRecur=false;
-  selType('depose'); selWho('val');
-  document.getElementById('recur-btn').className = 'toggle';
+window.openModal = function(id) {
+  editingEventId = id || null;
+  if(editingEventId) {
+    const ev = events[editingEventId];
+    document.getElementById('f-date').value = ev.date;
+    document.getElementById('f-time').value = ev.time;
+    document.getElementById('f-endtime').value = ev.endTime || '09:00';
+    document.getElementById('f-lieu').value = ev.lieu || '';
+    document.getElementById('f-activite-name').value = ev.activiteName || '';
+    fType = ev.type; fWho = ev.who || 'val'; fRecur = false;
+    selType(fType); selWho(fWho);
+    document.getElementById('recur-btn').className = 'toggle';
+    document.getElementById('sheet-title').textContent = ev.type==='activite' ? 'Modifier l\'activité' : 'Modifier le trajet';
+    document.getElementById('btn-save').textContent = 'Enregistrer les modifications';
+    document.getElementById('modal-delete-btn').style.display = 'block';
+    document.getElementById('recur-group').style.display = 'none';
+  } else {
+    document.getElementById('f-date').value = selectedDay;
+    document.getElementById('f-endtime').value = '09:00';
+    document.getElementById('f-lieu').value = '';
+    document.getElementById('f-activite-name').value = '';
+    fType='depose'; fWho='val'; fRecur=false;
+    selType('depose'); selWho('val');
+    document.getElementById('recur-btn').className = 'toggle';
+    document.getElementById('btn-save').textContent = 'Enregistrer';
+    document.getElementById('modal-delete-btn').style.display = 'none';
+    document.getElementById('recur-group').style.display = 'block';
+  }
   document.getElementById('overlay').classList.add('open');
 }
 
@@ -861,7 +891,10 @@ window.saveEvent = async function() {
     base.activiteName = document.getElementById('f-activite-name').value.trim() || 'Activité';
     base.endTime = document.getElementById('f-endtime').value;
   }
-  if(fRecur) {
+  if(editingEventId) {
+    base.recur = events[editingEventId].recur || false;
+    await set(ref(db, 'events/'+editingEventId), base);
+  } else if(fRecur) {
     for(let w=0;w<12;w++) {
       const d=new Date(date+'T12:00:00'); d.setDate(d.getDate()+w*7);
       await push(eventsRef, {...base, date:toKey(d)});
@@ -874,6 +907,14 @@ window.saveEvent = async function() {
     const diff = Math.round((new Date(date+'T12:00:00')-new Date())/(7*24*3600*1000));
     weekOffset = diff>=0?Math.floor(diff):Math.ceil(diff);
   }
+}
+
+window.deleteEventFromModal = async function() {
+  if(!editingEventId) return;
+  if(!confirm('Supprimer cet événement ?')) return;
+  setSyncStatus('syncing');
+  await remove(ref(db,'events/'+editingEventId));
+  closeModal();
 }
 
 window.deleteEvent = async function(id) {
