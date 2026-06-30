@@ -42,6 +42,15 @@
   .lock-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(37,99,235,.1); }
   .lock-btn { width: 100%; padding: 14px; background: var(--accent); border: none; border-radius: 10px; color: #fff; font-size: 16px; font-weight: 600; cursor: pointer; }
   .lock-error { font-size: 13px; color: var(--danger); margin-top: 10px; min-height: 18px; }
+  .profile-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 8px; }
+  .profile-btn { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 16px 8px; border: 1px solid var(--border-strong); border-radius: 12px; background: var(--surface-1); color: var(--text); font-size: 14px; font-weight: 500; cursor: pointer; }
+  .profile-btn:hover { border-color: var(--accent); background: var(--accent-light); }
+  .profile-emoji { font-size: 26px; }
+  .lock-back-btn { width: 100%; padding: 10px; background: transparent; border: none; color: var(--text-3); font-size: 13px; cursor: pointer; margin-top: 4px; }
+  .lock-back-btn:hover { color: var(--text-2); }
+  .role-badge { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 600; padding: 3px 9px; border-radius: 20px; margin-left: 6px; vertical-align: middle; }
+  .role-badge.admin { background: #fef3c7; color: #92400e; }
+  .role-badge.guest { background: var(--surface-1); color: var(--text-3); border: 1px solid var(--border); }
 
   .header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 14px 16px 0; position: sticky; top: 0; z-index: 100; box-shadow: var(--shadow); }
   .header-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
@@ -245,9 +254,28 @@
   <div class="lock-card">
     <div class="lock-emoji">👨‍👩‍👧</div>
     <div class="lock-title">Agenda famille</div>
-    <div class="lock-sub">Entrez le code famille pour accéder à l'agenda</div>
-    <input type="password" class="lock-input" id="lock-input" placeholder="••••••••" onkeydown="if(event.key==='Enter') unlock()">
-    <button class="lock-btn" onclick="unlock()">Accéder</button>
+    <div class="lock-sub" id="lock-sub">Qui êtes-vous ?</div>
+
+    <div class="profile-grid" id="profile-grid">
+      <button class="profile-btn" onclick="selectProfile('supernana')">
+        <span class="profile-emoji">👑</span><span>Supernana</span>
+      </button>
+      <button class="profile-btn" onclick="selectProfile('val')">
+        <span class="profile-emoji">👤</span><span>Val</span>
+      </button>
+      <button class="profile-btn" onclick="selectProfile('alex')">
+        <span class="profile-emoji">👤</span><span>Alex</span>
+      </button>
+      <button class="profile-btn" onclick="selectProfile('invite')">
+        <span class="profile-emoji">👁️</span><span>Invité</span>
+      </button>
+    </div>
+
+    <div id="password-step" style="display:none">
+      <input type="password" class="lock-input" id="lock-input" placeholder="••••••••" onkeydown="if(event.key==='Enter') unlock()">
+      <button class="lock-btn" onclick="unlock()">Accéder</button>
+      <button class="lock-back-btn" onclick="backToProfiles()">‹ Changer de profil</button>
+    </div>
     <div class="lock-error" id="lock-error"></div>
   </div>
 </div>
@@ -475,8 +503,15 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
 import { getDatabase, ref, onValue, push, remove, set } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging.js";
 
-const CODE = "Anna2026!";
+const PROFILES = {
+  supernana: { password: "Anna2026!", role: "admin", label: "Supernana" },
+  val: { password: "Lavieestbelle69009!", role: "val", label: "Val" },
+  alex: { password: "Lavieestbelle92500!", role: "alex", label: "Alex" },
+  invite: { password: "Voyeur69009!", role: "guest", label: "Invité" }
+};
 const SESSION_KEY = "agenda_famille_auth";
+let selectedProfileKey = null;
+let currentRole = null; // 'admin' | 'val' | 'alex' | 'guest'
 const firebaseConfig = {
   apiKey: "AIzaSyApJGkj4NbwrUKhEUGT4q6w7mYkVRll1-o",
   authDomain: "agenda-famille-6b71f.firebaseapp.com",
@@ -532,25 +567,51 @@ function toKey(d) {
 function todayKey() { return toKey(new Date()); }
 function setSyncStatus(s) { document.getElementById('sync-dot').className = 'sync-dot ' + s; }
 
+window.selectProfile = function(key) {
+  selectedProfileKey = key;
+  document.getElementById('profile-grid').style.display = 'none';
+  document.getElementById('lock-sub').textContent = `Mot de passe — ${PROFILES[key].label}`;
+  document.getElementById('password-step').style.display = 'block';
+  document.getElementById('lock-error').textContent = '';
+  document.getElementById('lock-input').value = '';
+  document.getElementById('lock-input').focus();
+}
+
+window.backToProfiles = function() {
+  selectedProfileKey = null;
+  document.getElementById('profile-grid').style.display = 'grid';
+  document.getElementById('password-step').style.display = 'none';
+  document.getElementById('lock-sub').textContent = 'Qui êtes-vous ?';
+  document.getElementById('lock-error').textContent = '';
+}
+
 window.unlock = function() {
-  if(document.getElementById('lock-input').value === CODE) {
-    sessionStorage.setItem(SESSION_KEY, '1');
+  const profile = PROFILES[selectedProfileKey];
+  if(document.getElementById('lock-input').value === profile.password) {
+    sessionStorage.setItem(SESSION_KEY, JSON.stringify({ profile: selectedProfileKey, role: profile.role }));
+    currentRole = profile.role;
     document.getElementById('lock-screen').style.display = 'none';
     document.getElementById('app-content').style.display = 'block';
     startApp();
   } else {
-    document.getElementById('lock-error').textContent = 'Code incorrect, réessayez.';
+    document.getElementById('lock-error').textContent = 'Mot de passe incorrect, réessayez.';
     document.getElementById('lock-input').value = '';
   }
 }
 
-if(sessionStorage.getItem(SESSION_KEY) === '1') {
-  document.getElementById('lock-screen').style.display = 'none';
-  document.getElementById('app-content').style.display = 'block';
-  startApp();
+const savedSession = sessionStorage.getItem(SESSION_KEY);
+if(savedSession) {
+  try {
+    const parsed = JSON.parse(savedSession);
+    currentRole = parsed.role;
+    document.getElementById('lock-screen').style.display = 'none';
+    document.getElementById('app-content').style.display = 'block';
+    startApp();
+  } catch(e) {}
 }
 
 function startApp() {
+  applyRoleUI();
   setSyncStatus('syncing');
   onValue(eventsRef, snap => { events = snap.val() || {}; setSyncStatus('online'); render(); });
   onValue(templatesRef, snap => { templates = snap.val() || {}; render(); });
@@ -566,6 +627,46 @@ function startApp() {
       }
     });
   }
+}
+
+// ====== GESTION DES RÔLES / PERMISSIONS ======
+
+function canEditEvent(ev) {
+  if(currentRole === 'admin') return true;
+  if(currentRole === 'guest') return false;
+  if(currentRole === 'val') return ev.who === 'val';
+  if(currentRole === 'alex') return ev.who === 'alex';
+  return false;
+}
+
+function canCreateAsWho(who) {
+  if(currentRole === 'admin') return true;
+  if(currentRole === 'guest') return false;
+  return currentRole === who;
+}
+
+function isGuest() { return currentRole === 'guest'; }
+function isAdmin() { return currentRole === 'admin'; }
+
+function applyRoleUI() {
+  // FAB de création masqué pour l'invité
+  document.getElementById('fab-btn').style.display = isGuest() ? 'none' : 'flex';
+  // Le sélecteur Val/Alex en haut : si on est val ou alex, on se bloque sur son propre profil
+  if(currentRole === 'val' || currentRole === 'alex') {
+    currentUser = currentRole;
+    document.getElementById('btn-val').disabled = currentRole !== 'val';
+    document.getElementById('btn-alex').disabled = currentRole !== 'alex';
+    document.getElementById('btn-val').style.opacity = currentRole === 'val' ? '1' : '.4';
+    document.getElementById('btn-alex').style.opacity = currentRole === 'alex' ? '1' : '.4';
+  }
+  // Badge de rôle à côté du titre
+  const titleEl = document.querySelector('.app-title');
+  let badgeHtml = '';
+  if(currentRole === 'admin') badgeHtml = '<span class="role-badge admin">👑 Admin</span>';
+  if(currentRole === 'guest') badgeHtml = '<span class="role-badge guest">👁️ Invité</span>';
+  const existingBadge = titleEl.querySelector('.role-badge');
+  if(existingBadge) existingBadge.remove();
+  if(badgeHtml) titleEl.insertAdjacentHTML('beforeend', badgeHtml);
 }
 
 let swRegistration = null;
@@ -830,7 +931,10 @@ function renderEvents() {
   }
   main.innerHTML = `<div class="day-title">${title}</div>` + dayEvs.map(([id,ev]) => {
     const whoTag = ev.who ? `<span class="tag tag-${ev.who}">${ev.who==='val'?'Val':'Alex'}</span>` : '';
-    return `<div class="event-card" onclick="openModal('${id}')" style="cursor:pointer">
+    const editable = canEditEvent(ev);
+    const delBtn = editable ? `<button class="del-btn" onclick="event.stopPropagation(); deleteEvent('${id}')">✕</button>` : '';
+    const clickAttr = editable ? `onclick="openModal('${id}')" style="cursor:pointer"` : '';
+    return `<div class="event-card" ${clickAttr}>
       <div class="ev-icon ${ev.type}">${evIcon(ev.type)}</div>
       <div class="ev-body">
         <div class="ev-type">${evLabel(ev)}</div>
@@ -838,13 +942,15 @@ function renderEvents() {
         ${ev.lieu?`<div class="ev-lieu">📍 ${ev.lieu}</div>`:''}
         <div class="ev-tags">${whoTag}${ev.recur?'<span class="tag tag-recur">🔁 hebdo</span>':''}</div>
       </div>
-      <button class="del-btn" onclick="event.stopPropagation(); deleteEvent('${id}')">✕</button>
+      ${delBtn}
     </div>`;
   }).join('');
-  document.getElementById('tpl-quick-btn').style.display = Object.keys(templates).length ? 'block' : 'none';
+  document.getElementById('tpl-quick-btn').style.display = (Object.keys(templates).length && !isGuest()) ? 'block' : 'none';
 }
 
 window.openModal = function(id) {
+  if(isGuest()) return;
+  if(id && !canEditEvent(events[id])) { alert("Vous ne pouvez modifier que vos propres événements."); return; }
   editingEventId = id || null;
   if(editingEventId) {
     const ev = events[editingEventId];
@@ -865,8 +971,9 @@ window.openModal = function(id) {
     document.getElementById('f-endtime').value = '09:00';
     document.getElementById('f-lieu').value = '';
     document.getElementById('f-activite-name').value = '';
-    fType='depose'; fWho='val'; fRecur=false;
-    selType('depose'); selWho('val');
+    const defaultWho = (currentRole==='val'||currentRole==='alex') ? currentRole : 'val';
+    fType='depose'; fWho=defaultWho; fRecur=false;
+    selType('depose'); selWho(defaultWho);
     document.getElementById('recur-btn').className = 'toggle';
     document.getElementById('btn-save').textContent = 'Enregistrer';
     document.getElementById('modal-delete-btn').style.display = 'none';
@@ -896,6 +1003,7 @@ window.selType = function(t) {
 }
 
 window.selWho = function(w) {
+  if((currentRole==='val' && w!=='val') || (currentRole==='alex' && w!=='alex')) return;
   fWho = w;
   document.getElementById('w-val').className = 'seg-btn'+(w==='val'?' sel val':' val');
   document.getElementById('w-alex').className = 'seg-btn'+(w==='alex'?' sel alex':' alex');
@@ -907,16 +1015,23 @@ window.toggleRecur = function() {
 }
 
 window.saveEvent = async function() {
+  if(isGuest()) return;
   const date = document.getElementById('f-date').value;
   const time = document.getElementById('f-time').value;
   const lieu = document.getElementById('f-lieu').value.trim();
   if(!date||!time) return;
-  setSyncStatus('syncing');
+  if(!canCreateAsWho(fWho)) { alert("Vous ne pouvez gérer que vos propres événements."); return; }
+  if(editingEventId && !canEditEvent(events[editingEventId])) { alert("Vous ne pouvez modifier que vos propres événements."); return; }
   const base = { type:fType, time, lieu, recur:fRecur, date, who:fWho };
   if(fType==='activite') {
     base.activiteName = document.getElementById('f-activite-name').value.trim() || 'Activité';
     base.endTime = document.getElementById('f-endtime').value;
+    if(base.endTime && base.endTime <= time) {
+      alert("L'heure de fin doit être après l'heure de début.");
+      return;
+    }
   }
+  setSyncStatus('syncing');
   if(editingEventId) {
     base.recur = events[editingEventId].recur || false;
     await set(ref(db, 'events/'+editingEventId), base);
@@ -937,6 +1052,7 @@ window.saveEvent = async function() {
 
 window.deleteEventFromModal = async function() {
   if(!editingEventId) return;
+  if(!canEditEvent(events[editingEventId])) { alert("Vous ne pouvez supprimer que vos propres événements."); return; }
   if(!confirm('Supprimer cet événement ?')) return;
   setSyncStatus('syncing');
   await remove(ref(db,'events/'+editingEventId));
@@ -944,6 +1060,7 @@ window.deleteEventFromModal = async function() {
 }
 
 window.deleteEvent = async function(id) {
+  if(!canEditEvent(events[id])) { alert("Vous ne pouvez supprimer que vos propres événements."); return; }
   if(!confirm('Supprimer cet événement ?')) return;
   setSyncStatus('syncing');
   await remove(ref(db,'events/'+id));
@@ -1188,26 +1305,29 @@ function evLabelTpl(ev) {
 function renderTemplates() {
   const main = document.getElementById('main');
   const list = Object.entries(templates);
+  const addBtn = isGuest() ? '' : `<button class="tpl-add-btn" onclick="newTemplate()">+ Créer un modèle de semaine</button>`;
   if(!list.length) {
     main.innerHTML = `<div class="day-title">Modèles de semaine</div>
       <div class="empty"><div class="empty-emoji">📋</div><p>Aucun modèle pour l'instant</p></div>
-      <button class="tpl-add-btn" onclick="newTemplate()">+ Créer un modèle de semaine</button>`;
+      ${addBtn}`;
     return;
   }
   const cards = list.map(([id, tpl]) => {
     const totalEvs = tpl.days ? Object.values(tpl.days).reduce((s,arr)=>s+(arr?arr.length:0),0) : 0;
-    return `<div class="tpl-card">
-      <div class="tpl-card-top"><span class="tpl-name">${tpl.name||'Sans nom'}</span></div>
-      <div class="tpl-count">${totalEvs} événement${totalEvs>1?'s':''} configuré${totalEvs>1?'s':''}</div>
-      <div class="tpl-actions">
+    const actions = isGuest()
+      ? `<div class="tpl-actions"><button class="tpl-btn primary" disabled style="opacity:.5;cursor:default">▶ Lecture seule</button></div>`
+      : `<div class="tpl-actions">
         <button class="tpl-btn primary" onclick="openApplyModal('${id}')">▶ Appliquer</button>
         <button class="tpl-btn" onclick="editTemplate('${id}')">✏️ Modifier</button>
         <button class="tpl-btn danger" onclick="deleteTemplate('${id}')">🗑️</button>
-      </div>
+      </div>`;
+    return `<div class="tpl-card">
+      <div class="tpl-card-top"><span class="tpl-name">${tpl.name||'Sans nom'}</span></div>
+      <div class="tpl-count">${totalEvs} événement${totalEvs>1?'s':''} configuré${totalEvs>1?'s':''}</div>
+      ${actions}
     </div>`;
   }).join('');
-  main.innerHTML = `<div class="day-title">Modèles de semaine</div>${cards}
-    <button class="tpl-add-btn" onclick="newTemplate()">+ Créer un modèle de semaine</button>`;
+  main.innerHTML = `<div class="day-title">Modèles de semaine</div>${cards}${addBtn}`;
 }
 
 window.newTemplate = function() {
@@ -1307,6 +1427,10 @@ window.confirmTplEv = function() {
   if(teType==='activite') {
     ev.activiteName = document.getElementById('te-activite-name').value.trim() || 'Activité';
     ev.endTime = document.getElementById('te-endtime').value;
+    if(ev.endTime && ev.endTime <= time) {
+      alert("L'heure de fin doit être après l'heure de début.");
+      return;
+    }
   }
   editingTplData.days[tplEvDayIndex].push(ev);
   closeTplEvModal();
